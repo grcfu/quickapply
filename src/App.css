@@ -25,6 +25,68 @@
   letter-spacing: 0.08em;
 }
 
+.app__divider {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 16px 0;
+}
+
+.autofill {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.autofill__btn {
+  appearance: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 12px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent);
+  color: #ffffff;
+  cursor: pointer;
+  transition:
+    background 80ms ease,
+    border-color 80ms ease,
+    opacity 80ms ease;
+}
+
+.autofill__btn:hover:not(:disabled) {
+  background: #000000;
+  border-color: #000000;
+}
+
+.autofill__btn:active:not(:disabled) {
+  background: #000000;
+}
+
+.autofill__btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.autofill__btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.autofill__feedback {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.autofill__feedback--ok {
+  color: var(--success);
+}
+
+.autofill__feedback--err {
+  color: var(--danger);
+}
+
 .debug {
   display: flex;
   flex-direction: column;
