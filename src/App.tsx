@@ -5,15 +5,22 @@ import { OnboardingForm } from "./onboarding/OnboardingForm";
 import { getProfile } from "./storage/profileStorage";
 import "./App.css";
 
-type View = "loading" | "onboarding" | "main";
+type View =
+  | { kind: "loading" }
+  | { kind: "onboarding"; canCancel: boolean }
+  | { kind: "main" };
 
 function App() {
-  const [view, setView] = useState<View>("loading");
+  const [view, setView] = useState<View>({ kind: "loading" });
 
   useEffect(() => {
     void (async () => {
       const profile = await getProfile();
-      setView(profile?.identity ? "main" : "onboarding");
+      setView(
+        profile?.identity
+          ? { kind: "main" }
+          : { kind: "onboarding", canCancel: false },
+      );
     })();
   }, []);
 
@@ -21,12 +28,29 @@ function App() {
     <div className="app">
       <header className="app__header">
         <h1 className="app__title">QuickApply</h1>
-        <span className="app__tag">v0.0.1</span>
+        <div className="app__header-right">
+          {view.kind === "main" && (
+            <button
+              className="app__header-btn"
+              onClick={() =>
+                setView({ kind: "onboarding", canCancel: true })
+              }
+            >
+              Edit profile
+            </button>
+          )}
+          <span className="app__tag">v0.0.1</span>
+        </div>
       </header>
-      {view === "onboarding" && (
-        <OnboardingForm onComplete={() => setView("main")} />
+      {view.kind === "onboarding" && (
+        <OnboardingForm
+          onComplete={() => setView({ kind: "main" })}
+          onCancel={
+            view.canCancel ? () => setView({ kind: "main" }) : undefined
+          }
+        />
       )}
-      {view === "main" && (
+      {view.kind === "main" && (
         <>
           <AutofillButton />
           <hr className="app__divider" />

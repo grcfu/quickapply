@@ -18,9 +18,10 @@ function boolToYn(b: boolean | undefined): YesNo {
 
 type Props = {
   onComplete: () => void;
+  onCancel?: () => void;
 };
 
-export function OnboardingForm({ onComplete }: Props) {
+export function OnboardingForm({ onComplete, onCancel }: Props) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -85,7 +86,9 @@ export function OnboardingForm({ onComplete }: Props) {
   return (
     <form className="onboarding" onSubmit={onSubmit}>
       <p className="onboarding__intro">
-        Fill these in once. QuickApply will reuse them on every application.
+        {onCancel
+          ? "Update your saved details."
+          : "Fill these in once. QuickApply will reuse them on every application."}
       </p>
 
       <div className="onboarding__row">
@@ -179,13 +182,33 @@ export function OnboardingForm({ onComplete }: Props) {
         </p>
       )}
 
-      <button
-        className="onboarding__submit"
-        type="submit"
-        disabled={saving}
-      >
-        {saving ? "Saving…" : "Save and continue"}
-      </button>
+      {onCancel ? (
+        <div className="onboarding__actions">
+          <button
+            className="onboarding__cancel"
+            type="button"
+            onClick={onCancel}
+            disabled={saving}
+          >
+            Cancel
+          </button>
+          <button
+            className="onboarding__submit"
+            type="submit"
+            disabled={saving}
+          >
+            {saving ? "Saving…" : "Save changes"}
+          </button>
+        </div>
+      ) : (
+        <button
+          className="onboarding__submit"
+          type="submit"
+          disabled={saving}
+        >
+          {saving ? "Saving…" : "Save and continue"}
+        </button>
+      )}
     </form>
   );
 }
