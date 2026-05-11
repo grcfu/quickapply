@@ -190,3 +190,95 @@
   word-break: break-word;
   color: var(--text);
 }
+
+.onboarding {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.onboarding__intro {
+  margin: 0 0 4px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.onboarding__row {
+  display: flex;
+  gap: 8px;
+}
+
+.onboarding__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.onboarding__label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.onboarding__input {
+  appearance: none;
+  font: inherit;
+  font-size: 12px;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  width: 100%;
+}
+
+.onboarding__input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+  border-color: var(--accent);
+}
+
+.onboarding__feedback {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.onboarding__feedback--err {
+  color: var(--danger);
+}
+
+.onboarding__submit {
+  appearance: none;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 12px;
+  margin-top: 4px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent);
+  color: #ffffff;
+  cursor: pointer;
+  transition:
+    background 80ms ease,
+    border-color 80ms ease,
+    opacity 80ms ease;
+}
+
+.onboarding__submit:hover:not(:disabled) {
+  background: #000000;
+  border-color: #000000;
+}
+
+.onboarding__submit:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.onboarding__submit:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
