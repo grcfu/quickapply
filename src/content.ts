@@ -1,4 +1,4 @@
-import { runAutofill } from "./autofill/runAutofill";
+import { runAutofill } from "./ats/runAutofill";
 import type { AutofillResponse, ExtensionMessage } from "./messages";
 
 console.log("[QuickApply] content script loaded");
