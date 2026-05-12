@@ -4,6 +4,17 @@ import { getProfile, updateProfile } from "../storage/profileStorage";
 
 type YesNo = "" | "yes" | "no";
 
+const RACE_OPTIONS = [
+  "Hispanic or Latino",
+  "White",
+  "Black or African American",
+  "Asian",
+  "Native Hawaiian or Other Pacific Islander",
+  "American Indian or Alaska Native",
+  "Two or more races",
+  "Decline to answer",
+];
+
 function ynToBool(v: YesNo): boolean | undefined {
   if (v === "yes") return true;
   if (v === "no") return false;
@@ -41,6 +52,7 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
   const [pronouns, setPronouns] = useState("");
   const [veteranStatus, setVeteranStatus] = useState("");
   const [disabilityStatus, setDisabilityStatus] = useState("");
+  const [raceEthnicity, setRaceEthnicity] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -74,8 +86,19 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
       if (demo?.pronouns) setPronouns(demo.pronouns);
       if (demo?.veteranStatus) setVeteranStatus(demo.veteranStatus);
       if (demo?.disabilityStatus) setDisabilityStatus(demo.disabilityStatus);
+      if (demo?.raceEthnicity && demo.raceEthnicity.length > 0) {
+        setRaceEthnicity(demo.raceEthnicity);
+      }
     })();
   }, []);
+
+  function toggleRace(value: string) {
+    setRaceEthnicity((prev) =>
+      prev.includes(value)
+        ? prev.filter((v) => v !== value)
+        : [...prev, value],
+    );
+  }
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -118,6 +141,8 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
             pronouns: pronouns.trim() || undefined,
             veteranStatus: veteranStatus.trim() || undefined,
             disabilityStatus: disabilityStatus.trim() || undefined,
+            raceEthnicity:
+              raceEthnicity.length > 0 ? raceEthnicity : undefined,
           },
         },
       });
@@ -359,6 +384,22 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
           placeholder="e.g. I don't wish to answer"
         />
       </label>
+
+      <div className="onboarding__field">
+        <span className="onboarding__label">Race / Ethnicity</span>
+        <div className="onboarding__checkboxes">
+          {RACE_OPTIONS.map((opt) => (
+            <label key={opt} className="onboarding__checkbox-row">
+              <input
+                type="checkbox"
+                checked={raceEthnicity.includes(opt)}
+                onChange={() => toggleRace(opt)}
+              />
+              <span>{opt}</span>
+            </label>
+          ))}
+        </div>
+      </div>
 
       {error && (
         <p className="onboarding__feedback onboarding__feedback--err">
