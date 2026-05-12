@@ -26,7 +26,7 @@ export type FileFieldDef = {
   getFile: (profile: Profile) => OriginalFile | undefined;
 };
 
-export type GreenhouseFieldDef =
+export type FieldDef =
   | InputFieldDef
   | SelectFieldDef
   | MultiCheckboxFieldDef
@@ -48,7 +48,7 @@ function yesNo(value: boolean | undefined): string | undefined {
   return value ? "Yes" : "No";
 }
 
-export const greenhouseFieldMap: Record<string, GreenhouseFieldDef> = {
+export const greenhouseFieldMap: Record<string, FieldDef> = {
   firstName: {
     kind: "input",
     selectors: [

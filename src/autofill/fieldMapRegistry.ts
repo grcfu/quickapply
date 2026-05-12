@@ -1,9 +1,9 @@
 import { greenhouseFieldMap } from "./greenhouseFields";
 import { leverFields } from "./leverFields";
 import { workdayFields } from "./workdayFields";
-import type { GreenhouseFieldDef } from "./greenhouseFields";
+import type { FieldDef } from "./greenhouseFields";
 
-export type FieldMap = Record<string, GreenhouseFieldDef>;
+export type FieldMap = Record<string, FieldDef>;
 
 type Adapter = {
   hostSuffix: string;

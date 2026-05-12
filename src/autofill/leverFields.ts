@@ -1,4 +1,4 @@
-import type { GreenhouseFieldDef } from "./greenhouseFields";
+import type { FieldDef } from "./greenhouseFields";
 import { pickResumeFile } from "./greenhouseFields";
 
 function fullName(
@@ -10,7 +10,7 @@ function fullName(
   return parts.join(" ");
 }
 
-export const leverFields: Record<string, GreenhouseFieldDef> = {
+export const leverFields: Record<string, FieldDef> = {
   name: {
     kind: "input",
     selectors: [

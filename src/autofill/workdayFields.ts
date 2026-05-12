@@ -1,4 +1,4 @@
-import type { GreenhouseFieldDef } from "./greenhouseFields";
+import type { FieldDef } from "./greenhouseFields";
 import { pickResumeFile } from "./greenhouseFields";
 
 function yesNo(value: boolean | undefined): string | undefined {
@@ -6,7 +6,7 @@ function yesNo(value: boolean | undefined): string | undefined {
   return value ? "Yes" : "No";
 }
 
-export const workdayFields: Record<string, GreenhouseFieldDef> = {
+export const workdayFields: Record<string, FieldDef> = {
   firstName: {
     kind: "input",
     selectors: [
