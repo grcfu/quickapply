@@ -32,6 +32,23 @@ export function setSelectValue(
   select.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
+export function setCheckboxChecked(
+  input: HTMLInputElement,
+  checked: boolean,
+): void {
+  const setter = Object.getOwnPropertyDescriptor(
+    HTMLInputElement.prototype,
+    "checked",
+  )?.set;
+  if (setter) {
+    setter.call(input, checked);
+  } else {
+    input.checked = checked;
+  }
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
 const TOKEN_RE = /[^a-z0-9]+/;
 
 function tokens(s: string): string[] {

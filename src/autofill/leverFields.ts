@@ -39,4 +39,13 @@ export const leverFields: Record<string, GreenhouseFieldDef> = {
     labelPatterns: [/^phone\*?$/i],
     getValue: (p) => p.identity?.contact?.phone,
   },
+  raceEthnicity: {
+    kind: "multi-checkbox",
+    labelPatterns: [
+      /race\s*\/?\s*ethnicity/i,
+      /^race\*?$/i,
+      /^ethnicity\*?$/i,
+    ],
+    getValues: (p) => p.identity?.demographics?.raceEthnicity,
+  },
 };

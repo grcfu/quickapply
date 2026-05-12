@@ -13,7 +13,16 @@ export type SelectFieldDef = {
   getValue: (profile: Profile) => string | undefined;
 };
 
-export type GreenhouseFieldDef = InputFieldDef | SelectFieldDef;
+export type MultiCheckboxFieldDef = {
+  kind: "multi-checkbox";
+  labelPatterns: RegExp[];
+  getValues: (profile: Profile) => string[] | undefined;
+};
+
+export type GreenhouseFieldDef =
+  | InputFieldDef
+  | SelectFieldDef
+  | MultiCheckboxFieldDef;
 
 function yesNo(value: boolean | undefined): string | undefined {
   if (value === undefined) return undefined;
@@ -197,5 +206,14 @@ export const greenhouseFieldMap: Record<string, GreenhouseFieldDef> = {
     kind: "select",
     labelPatterns: [/disability status/i, /^disability\*?$/i],
     getValue: (p) => p.identity?.demographics?.disabilityStatus,
+  },
+  raceEthnicity: {
+    kind: "multi-checkbox",
+    labelPatterns: [
+      /race\s*\/?\s*ethnicity/i,
+      /^race\*?$/i,
+      /^ethnicity\*?$/i,
+    ],
+    getValues: (p) => p.identity?.demographics?.raceEthnicity,
   },
 };
