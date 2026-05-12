@@ -275,6 +275,52 @@
   cursor: pointer;
 }
 
+.onboarding__file {
+  font: inherit;
+  font-size: 11px;
+  padding: 2px 0;
+  color: var(--text-muted);
+}
+
+.onboarding__resume-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-subtle);
+}
+
+.onboarding__resume-name {
+  font-weight: 500;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.onboarding__resume-remove {
+  appearance: none;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--danger);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.onboarding__resume-remove:hover {
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
+}
+
 .onboarding__row {
   display: flex;
   gap: 8px;

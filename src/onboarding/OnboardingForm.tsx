@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
-import type { FormEvent } from "react";
-import { getProfile, updateProfile } from "../storage/profileStorage";
+import type { ChangeEvent, FormEvent } from "react";
+import {
+  addResume,
+  getProfile,
+  removeResume,
+  updateProfile,
+} from "../storage/profileStorage";
 
 type YesNo = "" | "yes" | "no";
 
@@ -25,6 +30,24 @@ function boolToYn(b: boolean | undefined): YesNo {
   if (b === true) return "yes";
   if (b === false) return "no";
   return "";
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result !== "string") {
+        reject(new Error("FileReader returned non-string"));
+        return;
+      }
+      const comma = result.indexOf(",");
+      resolve(comma >= 0 ? result.slice(comma + 1) : result);
+    };
+    reader.onerror = () =>
+      reject(reader.error ?? new Error("FileReader error"));
+    reader.readAsDataURL(file);
+  });
 }
 
 type Props = {
@@ -53,6 +76,11 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
   const [veteranStatus, setVeteranStatus] = useState("");
   const [disabilityStatus, setDisabilityStatus] = useState("");
   const [raceEthnicity, setRaceEthnicity] = useState<string[]>([]);
+  const [resumeInfo, setResumeInfo] = useState<{
+    id: string;
+    filename: string;
+  } | null>(null);
+  const [resumeError, setResumeError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -89,8 +117,52 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
       if (demo?.raceEthnicity && demo.raceEthnicity.length > 0) {
         setRaceEthnicity(demo.raceEthnicity);
       }
+      const firstResume = profile?.resumes?.[0];
+      if (firstResume?.originalFile) {
+        setResumeInfo({
+          id: firstResume.id,
+          filename: firstResume.originalFile.filename,
+        });
+      }
     })();
   }, []);
+
+  async function onResumeFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setResumeError(null);
+    try {
+      const base64 = await fileToBase64(file);
+      const id = resumeInfo?.id ?? crypto.randomUUID();
+      const now = Date.now();
+      await addResume({
+        id,
+        name: file.name,
+        createdAt: now,
+        updatedAt: now,
+        originalFile: {
+          filename: file.name,
+          contentBase64: base64,
+          mimeType: file.type || undefined,
+        },
+      });
+      setResumeInfo({ id, filename: file.name });
+    } catch (err) {
+      setResumeError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  async function onRemoveResume() {
+    if (!resumeInfo) return;
+    try {
+      await removeResume(resumeInfo.id);
+      setResumeInfo(null);
+      setResumeError(null);
+    } catch (err) {
+      setResumeError(err instanceof Error ? err.message : String(err));
+    }
+  }
 
   function toggleRace(value: string) {
     setRaceEthnicity((prev) =>
@@ -161,6 +233,37 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
           ? "Update your saved details."
           : "Fill these in once. QuickApply will reuse them on every application."}
       </p>
+
+      <h2 className="onboarding__section">Resume</h2>
+      {resumeInfo ? (
+        <div className="onboarding__resume-info">
+          <span className="onboarding__resume-name">
+            {resumeInfo.filename}
+          </span>
+          <button
+            type="button"
+            className="onboarding__resume-remove"
+            onClick={onRemoveResume}
+          >
+            Remove
+          </button>
+        </div>
+      ) : (
+        <p className="onboarding__hint">
+          No resume saved yet. Upload a PDF to reuse on every application.
+        </p>
+      )}
+      <input
+        type="file"
+        accept=".pdf,.doc,.docx,application/pdf"
+        onChange={onResumeFile}
+        className="onboarding__file"
+      />
+      {resumeError && (
+        <p className="onboarding__feedback onboarding__feedback--err">
+          {resumeError}
+        </p>
+      )}
 
       <h2 className="onboarding__section">Personal</h2>
 
