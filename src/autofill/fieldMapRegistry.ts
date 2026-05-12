@@ -1,7 +1,7 @@
 import { greenhouseFieldMap } from "./greenhouseFields";
 import { leverFields } from "./leverFields";
 import { workdayFields } from "./workdayFields";
-import type { FieldDef } from "./greenhouseFields";
+import type { FieldDef } from "./types";
 
 export type FieldMap = Record<string, FieldDef>;
 

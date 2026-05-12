@@ -1,5 +1,5 @@
-import type { FieldDef } from "./greenhouseFields";
-import { pickResumeFile } from "./greenhouseFields";
+import { pickResumeFile } from "./profileHelpers";
+import type { FieldDef } from "./types";
 
 function fullName(
   first: string | undefined,

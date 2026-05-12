@@ -14,7 +14,7 @@ import type {
   InputFieldDef,
   MultiCheckboxFieldDef,
   SelectFieldDef,
-} from "./greenhouseFields";
+} from "./types";
 
 function findInput(def: InputFieldDef): HTMLInputElement | null {
   for (const sel of def.selectors) {

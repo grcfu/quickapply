@@ -1,47 +1,5 @@
-import type { OriginalFile, Profile } from "../types/profile";
-
-export type InputFieldDef = {
-  kind: "input";
-  selectors: string[];
-  labelPatterns?: RegExp[];
-  getValue: (profile: Profile) => string | undefined;
-};
-
-export type SelectFieldDef = {
-  kind: "select";
-  labelPatterns: RegExp[];
-  getValue: (profile: Profile) => string | undefined;
-};
-
-export type MultiCheckboxFieldDef = {
-  kind: "multi-checkbox";
-  labelPatterns: RegExp[];
-  getValues: (profile: Profile) => string[] | undefined;
-};
-
-export type FileFieldDef = {
-  kind: "file";
-  selectors: string[];
-  labelPatterns?: RegExp[];
-  getFile: (profile: Profile) => OriginalFile | undefined;
-};
-
-export type FieldDef =
-  | InputFieldDef
-  | SelectFieldDef
-  | MultiCheckboxFieldDef
-  | FileFieldDef;
-
-export function pickResumeFile(profile: Profile): OriginalFile | undefined {
-  const resumes = profile.resumes ?? [];
-  if (resumes.length === 0) return undefined;
-  const defaultId = profile.settings?.defaultResumeId;
-  if (defaultId) {
-    const found = resumes.find((r) => r.id === defaultId);
-    if (found?.originalFile) return found.originalFile;
-  }
-  return resumes[0]?.originalFile;
-}
+import { pickResumeFile } from "./profileHelpers";
+import type { FieldDef } from "./types";
 
 function yesNo(value: boolean | undefined): string | undefined {
   if (value === undefined) return undefined;
