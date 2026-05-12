@@ -110,6 +110,12 @@
   border-radius: 4px;
 }
 
+.resumes__default {
+  margin: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
 .resumes__name {
   flex: 1;
   font-size: 11px;

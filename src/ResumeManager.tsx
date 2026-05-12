@@ -4,24 +4,38 @@ import {
   addResume,
   getProfile,
   removeResume,
+  updateProfile,
 } from "./storage/profileStorage";
 import { fileToBase64 } from "./resume/fileUtils";
 import type { ResumeProfile } from "./types/profile";
 
 export function ResumeManager() {
   const [resumes, setResumes] = useState<ResumeProfile[]>([]);
+  const [defaultId, setDefaultId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     void (async () => {
       const profile = await getProfile();
       setResumes(profile?.resumes ?? []);
+      setDefaultId(profile?.settings?.defaultResumeId ?? null);
     })();
   }, []);
 
   async function refresh() {
     const profile = await getProfile();
     setResumes(profile?.resumes ?? []);
+    setDefaultId(profile?.settings?.defaultResumeId ?? null);
+  }
+
+  async function onSetDefault(id: string) {
+    try {
+      await updateProfile({ settings: { defaultResumeId: id } });
+      setDefaultId(id);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
   }
 
   async function onAddFile(e: ChangeEvent<HTMLInputElement>) {
@@ -69,6 +83,14 @@ export function ResumeManager() {
         <ul className="resumes__list">
           {resumes.map((r) => (
             <li key={r.id} className="resumes__item">
+              <input
+                type="radio"
+                name="defaultResume"
+                className="resumes__default"
+                checked={r.id === defaultId}
+                onChange={() => onSetDefault(r.id)}
+                aria-label={`Use ${r.originalFile?.filename ?? r.name} as default`}
+              />
               <span className="resumes__name">
                 {r.originalFile?.filename ?? r.name}
               </span>
