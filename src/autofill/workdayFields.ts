@@ -1,4 +1,5 @@
 import type { GreenhouseFieldDef } from "./greenhouseFields";
+import { pickResumeFile } from "./greenhouseFields";
 
 function yesNo(value: boolean | undefined): string | undefined {
   if (value === undefined) return undefined;
@@ -111,5 +112,43 @@ export const workdayFields: Record<string, GreenhouseFieldDef> = {
     kind: "select",
     labelPatterns: [/citizenship status/i, /^citizenship$/i],
     getValue: (p) => p.identity?.workAuth?.citizenshipStatus,
+  },
+  gender: {
+    kind: "select",
+    labelPatterns: [/^gender\*?$/i, /gender identity/i],
+    getValue: (p) => p.identity?.demographics?.gender,
+  },
+  veteranStatus: {
+    kind: "select",
+    labelPatterns: [
+      /veteran status/i,
+      /^veteran\*?$/i,
+      /protected veteran/i,
+    ],
+    getValue: (p) => p.identity?.demographics?.veteranStatus,
+  },
+  disabilityStatus: {
+    kind: "select",
+    labelPatterns: [/disability status/i, /^disability\*?$/i],
+    getValue: (p) => p.identity?.demographics?.disabilityStatus,
+  },
+  raceEthnicity: {
+    kind: "multi-checkbox",
+    labelPatterns: [
+      /race\s*\/?\s*ethnicity/i,
+      /^race\*?$/i,
+      /^ethnicity\*?$/i,
+    ],
+    getValues: (p) => p.identity?.demographics?.raceEthnicity,
+  },
+  resume: {
+    kind: "file",
+    selectors: [
+      'input[data-automation-id="file-upload-input-ref"]',
+      'input[type="file"][data-automation-id*="resume"]',
+      'input[type="file"][data-automation-id*="attachment"]',
+    ],
+    labelPatterns: [/^resume\*?$/i, /^cv\*?$/i, /^resume\/cv\*?$/i],
+    getFile: (p) => pickResumeFile(p),
   },
 };
