@@ -29,6 +29,9 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
   const [citizenship, setCitizenship] = useState("");
   const [workAuthUS, setWorkAuthUS] = useState<YesNo>("");
   const [sponsorship, setSponsorship] = useState<YesNo>("");
+  const [school, setSchool] = useState("");
+  const [gpa, setGpa] = useState("");
+  const [graduationDate, setGraduationDate] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,6 +49,11 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
       }
       setWorkAuthUS(boolToYn(identity.workAuth?.authorizedToWorkInUS));
       setSponsorship(boolToYn(identity.workAuth?.requiresSponsorship));
+      if (identity.education?.school) setSchool(identity.education.school);
+      if (identity.education?.gpa) setGpa(identity.education.gpa);
+      if (identity.education?.graduationDate) {
+        setGraduationDate(identity.education.graduationDate);
+      }
     })();
   }, []);
 
@@ -73,6 +81,11 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
             authorizedToWorkInUS: ynToBool(workAuthUS),
             requiresSponsorship: ynToBool(sponsorship),
           },
+          education: {
+            school: school.trim() || undefined,
+            gpa: gpa.trim() || undefined,
+            graduationDate: graduationDate.trim() || undefined,
+          },
         },
       });
       onComplete();
@@ -90,6 +103,8 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
           ? "Update your saved details."
           : "Fill these in once. QuickApply will reuse them on every application."}
       </p>
+
+      <h2 className="onboarding__section">Personal</h2>
 
       <div className="onboarding__row">
         <label className="onboarding__field">
@@ -137,6 +152,8 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
         />
       </label>
 
+      <h2 className="onboarding__section">Work authorization</h2>
+
       <label className="onboarding__field">
         <span className="onboarding__label">Citizenship status</span>
         <input
@@ -173,6 +190,39 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
             <option value="yes">Yes</option>
             <option value="no">No</option>
           </select>
+        </label>
+      </div>
+
+      <h2 className="onboarding__section">Education</h2>
+
+      <label className="onboarding__field">
+        <span className="onboarding__label">School</span>
+        <input
+          className="onboarding__input"
+          value={school}
+          onChange={(e) => setSchool(e.target.value)}
+          placeholder="e.g. Vanderbilt University"
+        />
+      </label>
+
+      <div className="onboarding__row">
+        <label className="onboarding__field">
+          <span className="onboarding__label">GPA</span>
+          <input
+            className="onboarding__input"
+            value={gpa}
+            onChange={(e) => setGpa(e.target.value)}
+            placeholder="e.g. 3.8"
+          />
+        </label>
+        <label className="onboarding__field">
+          <span className="onboarding__label">Graduation date</span>
+          <input
+            className="onboarding__input"
+            value={graduationDate}
+            onChange={(e) => setGraduationDate(e.target.value)}
+            placeholder="e.g. 2026-05"
+          />
         </label>
       </div>
 

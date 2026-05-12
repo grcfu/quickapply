@@ -238,6 +238,15 @@
   color: var(--text-muted);
 }
 
+.onboarding__section {
+  margin: 8px 0 0;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
 .onboarding__row {
   display: flex;
   gap: 8px;

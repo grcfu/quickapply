@@ -33,6 +33,12 @@ export type WorkAuth = {
   authorizedToWorkInUS?: boolean;
 };
 
+export type Education = {
+  school?: string;
+  gpa?: string;
+  graduationDate?: string;
+};
+
 export type EEOAnswers = Record<string, string | string[] | undefined>;
 
 export type Identity = {
@@ -40,6 +46,7 @@ export type Identity = {
   contact?: Contact;
   demographics?: Demographics;
   workAuth?: WorkAuth;
+  education?: Education;
   eeo?: EEOAnswers;
 };
 

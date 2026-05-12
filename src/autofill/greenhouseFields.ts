@@ -90,4 +90,40 @@ export const greenhouseFieldMap: Record<string, GreenhouseFieldDef> = {
     ],
     getValue: (p) => p.identity?.workAuth?.citizenshipStatus,
   },
+  school: {
+    kind: "input",
+    selectors: [
+      'input[name="job_application[school]"]',
+      'input[id="school"]',
+    ],
+    labelPatterns: [
+      /^school\*?$/i,
+      /^university\*?$/i,
+      /^college\*?$/i,
+      /^school name\*?$/i,
+    ],
+    getValue: (p) => p.identity?.education?.school,
+  },
+  gpa: {
+    kind: "input",
+    selectors: [
+      'input[name="job_application[gpa]"]',
+      'input[id="gpa"]',
+    ],
+    labelPatterns: [/^gpa\*?$/i, /grade point average/i],
+    getValue: (p) => p.identity?.education?.gpa,
+  },
+  graduationDate: {
+    kind: "input",
+    selectors: [
+      'input[name="job_application[graduation_date]"]',
+      'input[id="graduation_date"]',
+    ],
+    labelPatterns: [
+      /graduation date/i,
+      /expected graduation/i,
+      /^graduation\*?$/i,
+    ],
+    getValue: (p) => p.identity?.education?.graduationDate,
+  },
 };
