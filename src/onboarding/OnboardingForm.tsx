@@ -37,6 +37,10 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
   const [state, setState] = useState("");
   const [zip, setZip] = useState("");
   const [country, setCountry] = useState("");
+  const [gender, setGender] = useState("");
+  const [pronouns, setPronouns] = useState("");
+  const [veteranStatus, setVeteranStatus] = useState("");
+  const [disabilityStatus, setDisabilityStatus] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,6 +69,11 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
       if (addr?.state) setState(addr.state);
       if (addr?.zip) setZip(addr.zip);
       if (addr?.country) setCountry(addr.country);
+      const demo = identity.demographics;
+      if (demo?.gender) setGender(demo.gender);
+      if (demo?.pronouns) setPronouns(demo.pronouns);
+      if (demo?.veteranStatus) setVeteranStatus(demo.veteranStatus);
+      if (demo?.disabilityStatus) setDisabilityStatus(demo.disabilityStatus);
     })();
   }, []);
 
@@ -103,6 +112,12 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
             school: school.trim() || undefined,
             gpa: gpa.trim() || undefined,
             graduationDate: graduationDate.trim() || undefined,
+          },
+          demographics: {
+            gender: gender.trim() || undefined,
+            pronouns: pronouns.trim() || undefined,
+            veteranStatus: veteranStatus.trim() || undefined,
+            disabilityStatus: disabilityStatus.trim() || undefined,
           },
         },
       });
@@ -298,6 +313,52 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
           />
         </label>
       </div>
+
+      <h2 className="onboarding__section">Demographics</h2>
+      <p className="onboarding__hint">
+        Optional. Used for the voluntary EEO questions ATS forms ask.
+      </p>
+
+      <div className="onboarding__row">
+        <label className="onboarding__field">
+          <span className="onboarding__label">Gender</span>
+          <input
+            className="onboarding__input"
+            value={gender}
+            onChange={(e) => setGender(e.target.value)}
+            placeholder="e.g. Decline to identify"
+          />
+        </label>
+        <label className="onboarding__field">
+          <span className="onboarding__label">Pronouns</span>
+          <input
+            className="onboarding__input"
+            value={pronouns}
+            onChange={(e) => setPronouns(e.target.value)}
+            placeholder="e.g. they/them"
+          />
+        </label>
+      </div>
+
+      <label className="onboarding__field">
+        <span className="onboarding__label">Veteran status</span>
+        <input
+          className="onboarding__input"
+          value={veteranStatus}
+          onChange={(e) => setVeteranStatus(e.target.value)}
+          placeholder="e.g. I am not a protected veteran"
+        />
+      </label>
+
+      <label className="onboarding__field">
+        <span className="onboarding__label">Disability status</span>
+        <input
+          className="onboarding__input"
+          value={disabilityStatus}
+          onChange={(e) => setDisabilityStatus(e.target.value)}
+          placeholder="e.g. I don't wish to answer"
+        />
+      </label>
 
       {error && (
         <p className="onboarding__feedback onboarding__feedback--err">

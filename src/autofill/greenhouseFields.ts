@@ -174,4 +174,28 @@ export const greenhouseFieldMap: Record<string, GreenhouseFieldDef> = {
     labelPatterns: [/^country\*?$/i, /^country\/region\*?$/i],
     getValue: (p) => p.identity?.contact?.address?.country,
   },
+  gender: {
+    kind: "select",
+    labelPatterns: [/^gender\*?$/i, /gender identity/i],
+    getValue: (p) => p.identity?.demographics?.gender,
+  },
+  pronouns: {
+    kind: "input",
+    selectors: [
+      'input[name="job_application[pronouns]"]',
+      'input[id="pronouns"]',
+    ],
+    labelPatterns: [/^pronouns\*?$/i, /preferred pronouns/i],
+    getValue: (p) => p.identity?.demographics?.pronouns,
+  },
+  veteranStatus: {
+    kind: "select",
+    labelPatterns: [/veteran status/i, /^veteran\*?$/i, /protected veteran/i],
+    getValue: (p) => p.identity?.demographics?.veteranStatus,
+  },
+  disabilityStatus: {
+    kind: "select",
+    labelPatterns: [/disability status/i, /^disability\*?$/i],
+    getValue: (p) => p.identity?.demographics?.disabilityStatus,
+  },
 };
