@@ -148,7 +148,7 @@ export async function importProfile(json: string): Promise<void> {
     parsed = JSON.parse(json);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    throw new Error(`Invalid JSON: ${msg}`);
+    throw new Error(`Invalid JSON: ${msg}`, { cause: err });
   }
   if (!isPlainObject(parsed)) {
     throw new Error("Invalid profile: top-level value must be an object");

@@ -25,7 +25,9 @@ export function DebugPanel() {
   }
 
   useEffect(() => {
-    void refresh();
+    void (async () => {
+      setProfile(await getProfile());
+    })();
   }, []);
 
   function reportOk(message: string) {
