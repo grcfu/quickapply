@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { AutofillButton } from "./AutofillButton";
 import { DebugPanel } from "./debug/DebugPanel";
 import { OnboardingForm } from "./onboarding/OnboardingForm";
+import { ResumeStatus } from "./ResumeStatus";
 import { getProfile } from "./storage/profileStorage";
 import "./App.css";
 
@@ -52,6 +53,7 @@ function App() {
       )}
       {view.kind === "main" && (
         <>
+          <ResumeStatus />
           <AutofillButton />
           <hr className="app__divider" />
           <DebugPanel />
