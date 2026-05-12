@@ -126,4 +126,52 @@ export const greenhouseFieldMap: Record<string, GreenhouseFieldDef> = {
     ],
     getValue: (p) => p.identity?.education?.graduationDate,
   },
+  street: {
+    kind: "input",
+    selectors: [
+      'input[name="job_application[street]"]',
+      'input[id="street"]',
+      'input[autocomplete="street-address"]',
+      'input[autocomplete="address-line1"]',
+    ],
+    labelPatterns: [/^street( address)?\*?$/i, /^address( line 1)?\*?$/i],
+    getValue: (p) => p.identity?.contact?.address?.street,
+  },
+  city: {
+    kind: "input",
+    selectors: [
+      'input[name="job_application[city]"]',
+      'input[id="city"]',
+      'input[autocomplete="address-level2"]',
+    ],
+    labelPatterns: [/^city\*?$/i, /^city\/town\*?$/i],
+    getValue: (p) => p.identity?.contact?.address?.city,
+  },
+  state: {
+    kind: "input",
+    selectors: [
+      'input[name="job_application[region]"]',
+      'input[name="job_application[state]"]',
+      'input[id="state"]',
+      'input[autocomplete="address-level1"]',
+    ],
+    labelPatterns: [/^state\*?$/i, /^state\/province\*?$/i, /^region\*?$/i],
+    getValue: (p) => p.identity?.contact?.address?.state,
+  },
+  zip: {
+    kind: "input",
+    selectors: [
+      'input[name="job_application[zip]"]',
+      'input[name="job_application[postal_code]"]',
+      'input[id="zip"]',
+      'input[autocomplete="postal-code"]',
+    ],
+    labelPatterns: [/^zip( code)?\*?$/i, /^postal code\*?$/i],
+    getValue: (p) => p.identity?.contact?.address?.zip,
+  },
+  country: {
+    kind: "select",
+    labelPatterns: [/^country\*?$/i, /^country\/region\*?$/i],
+    getValue: (p) => p.identity?.contact?.address?.country,
+  },
 };

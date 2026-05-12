@@ -32,6 +32,11 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
   const [school, setSchool] = useState("");
   const [gpa, setGpa] = useState("");
   const [graduationDate, setGraduationDate] = useState("");
+  const [street, setStreet] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [zip, setZip] = useState("");
+  const [country, setCountry] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,6 +59,12 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
       if (identity.education?.graduationDate) {
         setGraduationDate(identity.education.graduationDate);
       }
+      const addr = identity.contact?.address;
+      if (addr?.street) setStreet(addr.street);
+      if (addr?.city) setCity(addr.city);
+      if (addr?.state) setState(addr.state);
+      if (addr?.zip) setZip(addr.zip);
+      if (addr?.country) setCountry(addr.country);
     })();
   }, []);
 
@@ -75,6 +86,13 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
           contact: {
             email: email.trim(),
             phone: phone.trim() || undefined,
+            address: {
+              street: street.trim() || undefined,
+              city: city.trim() || undefined,
+              state: state.trim() || undefined,
+              zip: zip.trim() || undefined,
+              country: country.trim() || undefined,
+            },
           },
           workAuth: {
             citizenshipStatus: citizenship.trim() || undefined,
@@ -222,6 +240,61 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
             value={graduationDate}
             onChange={(e) => setGraduationDate(e.target.value)}
             placeholder="e.g. 2026-05"
+          />
+        </label>
+      </div>
+
+      <h2 className="onboarding__section">Address</h2>
+
+      <label className="onboarding__field">
+        <span className="onboarding__label">Street</span>
+        <input
+          className="onboarding__input"
+          value={street}
+          onChange={(e) => setStreet(e.target.value)}
+          autoComplete="street-address"
+        />
+      </label>
+
+      <div className="onboarding__row">
+        <label className="onboarding__field">
+          <span className="onboarding__label">City</span>
+          <input
+            className="onboarding__input"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            autoComplete="address-level2"
+          />
+        </label>
+        <label className="onboarding__field">
+          <span className="onboarding__label">State / Region</span>
+          <input
+            className="onboarding__input"
+            value={state}
+            onChange={(e) => setState(e.target.value)}
+            autoComplete="address-level1"
+          />
+        </label>
+      </div>
+
+      <div className="onboarding__row">
+        <label className="onboarding__field">
+          <span className="onboarding__label">ZIP / Postal code</span>
+          <input
+            className="onboarding__input"
+            value={zip}
+            onChange={(e) => setZip(e.target.value)}
+            autoComplete="postal-code"
+          />
+        </label>
+        <label className="onboarding__field">
+          <span className="onboarding__label">Country</span>
+          <input
+            className="onboarding__input"
+            value={country}
+            onChange={(e) => setCountry(e.target.value)}
+            autoComplete="country-name"
+            placeholder="e.g. United States"
           />
         </label>
       </div>
