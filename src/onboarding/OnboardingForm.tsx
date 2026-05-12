@@ -6,6 +6,9 @@ import {
   removeResume,
   updateProfile,
 } from "../storage/profileStorage";
+import { extractTextFromPdf } from "../resume/extractText";
+import { extractFields } from "../resume/extractFields";
+import type { ExtractedFields } from "../resume/extractFields";
 
 type YesNo = "" | "yes" | "no";
 
@@ -81,6 +84,7 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
     filename: string;
   } | null>(null);
   const [resumeError, setResumeError] = useState<string | null>(null);
+  const [resumeFeedback, setResumeFeedback] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -127,11 +131,45 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
     })();
   }, []);
 
+  function applyPrefills(extracted: ExtractedFields): string[] {
+    const filled: string[] = [];
+    if (!firstName && extracted.firstName) {
+      setFirstName(extracted.firstName);
+      filled.push("first name");
+    }
+    if (!lastName && extracted.lastName) {
+      setLastName(extracted.lastName);
+      filled.push("last name");
+    }
+    if (!email && extracted.email) {
+      setEmail(extracted.email);
+      filled.push("email");
+    }
+    if (!phone && extracted.phone) {
+      setPhone(extracted.phone);
+      filled.push("phone");
+    }
+    if (!school && extracted.school) {
+      setSchool(extracted.school);
+      filled.push("school");
+    }
+    if (!gpa && extracted.gpa) {
+      setGpa(extracted.gpa);
+      filled.push("GPA");
+    }
+    if (!graduationDate && extracted.graduationDate) {
+      setGraduationDate(extracted.graduationDate);
+      filled.push("graduation date");
+    }
+    return filled;
+  }
+
   async function onResumeFile(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
     setResumeError(null);
+    setResumeFeedback(null);
     try {
       const base64 = await fileToBase64(file);
       const id = resumeInfo?.id ?? crypto.randomUUID();
@@ -148,6 +186,27 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
         },
       });
       setResumeInfo({ id, filename: file.name });
+
+      const isPdf =
+        file.type === "application/pdf" ||
+        file.name.toLowerCase().endsWith(".pdf");
+      if (isPdf) {
+        try {
+          const text = await extractTextFromPdf(file);
+          const extracted = extractFields(text);
+          const prefilled = applyPrefills(extracted);
+          if (prefilled.length > 0) {
+            setResumeFeedback(
+              `Imported ${prefilled.length} field${
+                prefilled.length > 1 ? "s" : ""
+              } from your resume (${prefilled.join(", ")}).`,
+            );
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          setResumeFeedback(`Saved, but couldn't read fields: ${msg}`);
+        }
+      }
     } catch (err) {
       setResumeError(err instanceof Error ? err.message : String(err));
     }
@@ -259,6 +318,11 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
         onChange={onResumeFile}
         className="onboarding__file"
       />
+      {resumeFeedback && (
+        <p className="onboarding__feedback onboarding__feedback--ok">
+          {resumeFeedback}
+        </p>
+      )}
       {resumeError && (
         <p className="onboarding__feedback onboarding__feedback--err">
           {resumeError}

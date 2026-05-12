@@ -435,6 +435,10 @@
   color: var(--danger);
 }
 
+.onboarding__feedback--ok {
+  color: var(--success);
+}
+
 .onboarding__submit {
   appearance: none;
   font: inherit;
