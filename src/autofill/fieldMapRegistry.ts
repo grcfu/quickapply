@@ -1,5 +1,6 @@
 import { greenhouseFieldMap } from "./greenhouseFields";
 import { leverFields } from "./leverFields";
+import { workdayFields } from "./workdayFields";
 import type { GreenhouseFieldDef } from "./greenhouseFields";
 
 export type FieldMap = Record<string, GreenhouseFieldDef>;
@@ -12,6 +13,7 @@ type Adapter = {
 const adapters: Adapter[] = [
   { hostSuffix: "greenhouse.io", fieldMap: greenhouseFieldMap },
   { hostSuffix: "lever.co", fieldMap: leverFields },
+  { hostSuffix: "myworkdayjobs.com", fieldMap: workdayFields },
 ];
 
 export function getFieldMapForHost(hostname: string): FieldMap | null {
