@@ -1,7 +1,7 @@
 import { getProfile } from "../storage/profileStorage";
 import type { AutofillResponse } from "../messages";
 import { findMatchingOption, setReactValue, setSelectValue } from "./fillField";
-import { greenhouseFieldMap } from "./greenhouseFields";
+import { getFieldMapForHost } from "./fieldMapRegistry";
 import type {
   GreenhouseFieldDef,
   InputFieldDef,
@@ -85,9 +85,19 @@ export async function runAutofill(): Promise<AutofillResponse> {
       error: "No profile loaded — open the extension and Load test profile.",
     };
   }
+  const fieldMap = getFieldMapForHost(window.location.hostname);
+  if (!fieldMap) {
+    return {
+      ok: false,
+      filled: 0,
+      fields: [],
+      skipped: [],
+      error: `No adapter for host ${window.location.hostname}.`,
+    };
+  }
   const fields: string[] = [];
   const skipped: string[] = [];
-  for (const [key, def] of Object.entries(greenhouseFieldMap)) {
+  for (const [key, def] of Object.entries(fieldMap)) {
     const value = def.getValue(profile);
     if (!value) {
       skipped.push(`${key} (no value in profile)`);
