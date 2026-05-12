@@ -1,4 +1,4 @@
-import type { Profile } from "../types/profile";
+import type { OriginalFile, Profile } from "../types/profile";
 
 export type InputFieldDef = {
   kind: "input";
@@ -19,10 +19,29 @@ export type MultiCheckboxFieldDef = {
   getValues: (profile: Profile) => string[] | undefined;
 };
 
+export type FileFieldDef = {
+  kind: "file";
+  selectors: string[];
+  labelPatterns?: RegExp[];
+  getFile: (profile: Profile) => OriginalFile | undefined;
+};
+
 export type GreenhouseFieldDef =
   | InputFieldDef
   | SelectFieldDef
-  | MultiCheckboxFieldDef;
+  | MultiCheckboxFieldDef
+  | FileFieldDef;
+
+export function pickResumeFile(profile: Profile): OriginalFile | undefined {
+  const resumes = profile.resumes ?? [];
+  if (resumes.length === 0) return undefined;
+  const defaultId = profile.settings?.defaultResumeId;
+  if (defaultId) {
+    const found = resumes.find((r) => r.id === defaultId);
+    if (found?.originalFile) return found.originalFile;
+  }
+  return resumes[0]?.originalFile;
+}
 
 function yesNo(value: boolean | undefined): string | undefined {
   if (value === undefined) return undefined;
@@ -215,5 +234,15 @@ export const greenhouseFieldMap: Record<string, GreenhouseFieldDef> = {
       /^ethnicity\*?$/i,
     ],
     getValues: (p) => p.identity?.demographics?.raceEthnicity,
+  },
+  resume: {
+    kind: "file",
+    selectors: [
+      'input[type="file"][name="job_application[resume]"]',
+      'input[type="file"][id="resume"]',
+      'input[type="file"][name*="resume"]',
+    ],
+    labelPatterns: [/^resume\*?$/i, /^resume\/cv\*?$/i, /^cv\*?$/i],
+    getFile: (p) => pickResumeFile(p),
   },
 };

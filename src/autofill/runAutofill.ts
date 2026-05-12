@@ -1,13 +1,16 @@
 import { getProfile } from "../storage/profileStorage";
 import type { AutofillResponse } from "../messages";
 import {
+  base64ToFile,
   findMatchingOption,
   setCheckboxChecked,
+  setFileValue,
   setReactValue,
   setSelectValue,
 } from "./fillField";
 import { getFieldMapForHost } from "./fieldMapRegistry";
 import type {
+  FileFieldDef,
   InputFieldDef,
   MultiCheckboxFieldDef,
   SelectFieldDef,
@@ -137,6 +140,52 @@ function fillField(
   return { ok: true };
 }
 
+function findFileInput(def: FileFieldDef): HTMLInputElement | null {
+  for (const sel of def.selectors) {
+    const el = document.querySelector<HTMLInputElement>(sel);
+    if (el && el.type === "file") return el;
+  }
+  if (def.labelPatterns && def.labelPatterns.length > 0) {
+    for (const label of Array.from(document.querySelectorAll("label"))) {
+      const text = (label.textContent ?? "").trim();
+      if (!def.labelPatterns.some((p) => p.test(text))) continue;
+      const forId = label.getAttribute("for");
+      if (forId) {
+        const input = document.getElementById(forId);
+        if (input instanceof HTMLInputElement && input.type === "file") {
+          return input;
+        }
+      }
+      const nested = label.querySelector('input[type="file"]');
+      if (nested instanceof HTMLInputElement) return nested;
+      let container: HTMLElement | null = label.parentElement;
+      for (let i = 0; i < 4 && container; i++) {
+        const file = container.querySelector('input[type="file"]');
+        if (file instanceof HTMLInputElement) return file;
+        container = container.parentElement;
+      }
+    }
+  }
+  return null;
+}
+
+function fillFileField(
+  key: string,
+  def: FileFieldDef,
+  source: { contentBase64: string; filename: string; mimeType?: string },
+): { ok: true } | { ok: false; reason: string } {
+  const input = findFileInput(def);
+  if (!input) return { ok: false, reason: `${key} (file input not found)` };
+  try {
+    const file = base64ToFile(source.contentBase64, source.filename, source.mimeType);
+    setFileValue(input, file);
+    return { ok: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false, reason: `${key} (file decode failed: ${msg})` };
+  }
+}
+
 function fillMultiCheckboxField(
   key: string,
   def: MultiCheckboxFieldDef,
@@ -198,6 +247,13 @@ export async function runAutofill(): Promise<AutofillResponse> {
         continue;
       }
       result = fillMultiCheckboxField(key, def, values);
+    } else if (def.kind === "file") {
+      const file = def.getFile(profile);
+      if (!file) {
+        skipped.push(`${key} (no file in profile)`);
+        continue;
+      }
+      result = fillFileField(key, def, file);
     } else {
       const value = def.getValue(profile);
       if (!value) {

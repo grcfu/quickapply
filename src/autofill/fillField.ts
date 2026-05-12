@@ -49,6 +49,27 @@ export function setCheckboxChecked(
   input.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
+export function base64ToFile(
+  base64: string,
+  filename: string,
+  mimeType?: string,
+): File {
+  const bin = atob(base64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new File([bytes], filename, {
+    type: mimeType ?? "application/octet-stream",
+  });
+}
+
+export function setFileValue(input: HTMLInputElement, file: File): void {
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  input.files = dt.files;
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
 const TOKEN_RE = /[^a-z0-9]+/;
 
 function tokens(s: string): string[] {

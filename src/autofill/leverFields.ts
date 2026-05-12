@@ -1,4 +1,5 @@
 import type { GreenhouseFieldDef } from "./greenhouseFields";
+import { pickResumeFile } from "./greenhouseFields";
 
 function fullName(
   first: string | undefined,
@@ -47,5 +48,14 @@ export const leverFields: Record<string, GreenhouseFieldDef> = {
       /^ethnicity\*?$/i,
     ],
     getValues: (p) => p.identity?.demographics?.raceEthnicity,
+  },
+  resume: {
+    kind: "file",
+    selectors: [
+      'input[type="file"][name="resume"]',
+      'input[type="file"][id="resume-upload-input"]',
+    ],
+    labelPatterns: [/^resume\*?$/i, /^resume\/cv\*?$/i],
+    getFile: (p) => pickResumeFile(p),
   },
 };
