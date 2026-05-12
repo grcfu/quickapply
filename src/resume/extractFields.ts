@@ -63,10 +63,10 @@ function extractName(text: string): {
 
 function extractSchool(text: string): string | undefined {
   const patterns = [
-    /\b([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){0,3}\s+University)\b/,
-    /\b(University\s+of\s+[A-Z][a-zA-Z]+(?:[,\s]+[A-Z][a-zA-Z]+){0,2})\b/,
-    /\b([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){0,2}\s+College)\b/,
-    /\b([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){0,2}\s+Institute\s+of\s+Technology)\b/,
+    /\b(University[ \t]+of[ \t]+[A-Z][a-zA-Z]+(?:[,\s]+[A-Z][a-zA-Z]+){0,2})\b/,
+    /\b([A-Z][a-zA-Z]+(?:[ \t]+[A-Z][a-zA-Z]+){0,3}[ \t]+University)\b/,
+    /\b([A-Z][a-zA-Z]+(?:[ \t]+[A-Z][a-zA-Z]+){0,2}[ \t]+College)\b/,
+    /\b([A-Z][a-zA-Z]+(?:[ \t]+[A-Z][a-zA-Z]+){0,2}[ \t]+Institute[ \t]+of[ \t]+Technology)\b/,
   ];
   for (const p of patterns) {
     const m = text.match(p);

@@ -23,8 +23,7 @@ The differentiator versus Simplify / LazyApply: no accounts, no servers, no payw
 - `npm run build` — production build: `tsc -b` (project references → `tsconfig.app.json` + `tsconfig.node.json`) then `vite build`.
 - `npm run lint` — ESLint (flat config in `eslint.config.js`; ignores `dist`).
 - `npm run preview` — Vite preview server. Not useful for the extension itself; prefer loading `dist/` in Chrome.
-
-No test runner is configured. Vitest may be added later for pure logic (resume parser, ATS field-matching). Manual testing for now via the `DebugPanel` in the popup.
+- `npm test` — Vitest in watch mode (jsdom environment). Use `npx vitest run` for a one-shot CI-style run. Covers pure extractors only — `extractFields` and `findMatchingOption`. Live-DOM autofill behavior is still verified manually via the `DebugPanel`.
 
 ## Architecture
 
