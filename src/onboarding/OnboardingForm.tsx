@@ -3,7 +3,6 @@ import type { ChangeEvent, FormEvent } from "react";
 import {
   addResume,
   getProfile,
-  removeResume,
   updateProfile,
 } from "../storage/profileStorage";
 import { extractTextFromPdf } from "../resume/extractText";
@@ -62,10 +61,6 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
   const [veteranStatus, setVeteranStatus] = useState("");
   const [disabilityStatus, setDisabilityStatus] = useState("");
   const [raceEthnicity, setRaceEthnicity] = useState<string[]>([]);
-  const [resumeInfo, setResumeInfo] = useState<{
-    id: string;
-    filename: string;
-  } | null>(null);
   const [resumeError, setResumeError] = useState<string | null>(null);
   const [resumeFeedback, setResumeFeedback] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -103,13 +98,6 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
       if (demo?.disabilityStatus) setDisabilityStatus(demo.disabilityStatus);
       if (demo?.raceEthnicity && demo.raceEthnicity.length > 0) {
         setRaceEthnicity(demo.raceEthnicity);
-      }
-      const firstResume = profile?.resumes?.[0];
-      if (firstResume?.originalFile) {
-        setResumeInfo({
-          id: firstResume.id,
-          filename: firstResume.originalFile.filename,
-        });
       }
     })();
   }, []);
@@ -155,10 +143,9 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
     setResumeFeedback(null);
     try {
       const base64 = await fileToBase64(file);
-      const id = resumeInfo?.id ?? crypto.randomUUID();
       const now = Date.now();
       await addResume({
-        id,
+        id: crypto.randomUUID(),
         name: file.name,
         createdAt: now,
         updatedAt: now,
@@ -168,8 +155,8 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
           mimeType: file.type || undefined,
         },
       });
-      setResumeInfo({ id, filename: file.name });
 
+      let message = `Saved "${file.name}".`;
       const isPdf =
         file.type === "application/pdf" ||
         file.name.toLowerCase().endsWith(".pdf");
@@ -179,28 +166,16 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
           const extracted = extractFields(text);
           const prefilled = applyPrefills(extracted);
           if (prefilled.length > 0) {
-            setResumeFeedback(
-              `Imported ${prefilled.length} field${
-                prefilled.length > 1 ? "s" : ""
-              } from your resume (${prefilled.join(", ")}).`,
-            );
+            message += ` Imported ${prefilled.length} field${
+              prefilled.length > 1 ? "s" : ""
+            } from your resume (${prefilled.join(", ")}).`;
           }
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
-          setResumeFeedback(`Saved, but couldn't read fields: ${msg}`);
+          message += ` Couldn't read fields: ${msg}`;
         }
       }
-    } catch (err) {
-      setResumeError(err instanceof Error ? err.message : String(err));
-    }
-  }
-
-  async function onRemoveResume() {
-    if (!resumeInfo) return;
-    try {
-      await removeResume(resumeInfo.id);
-      setResumeInfo(null);
-      setResumeError(null);
+      setResumeFeedback(message);
     } catch (err) {
       setResumeError(err instanceof Error ? err.message : String(err));
     }
@@ -277,24 +252,10 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
       </p>
 
       <h2 className="onboarding__section">Resume</h2>
-      {resumeInfo ? (
-        <div className="onboarding__resume-info">
-          <span className="onboarding__resume-name">
-            {resumeInfo.filename}
-          </span>
-          <button
-            type="button"
-            className="onboarding__resume-remove"
-            onClick={onRemoveResume}
-          >
-            Remove
-          </button>
-        </div>
-      ) : (
-        <p className="onboarding__hint">
-          No resume saved yet. Upload a PDF to reuse on every application.
-        </p>
-      )}
+      <p className="onboarding__hint">
+        Upload a PDF — we'll save it and try to prefill the fields below.
+        Manage saved resumes in the main view.
+      </p>
       <input
         type="file"
         accept=".pdf,.doc,.docx,application/pdf"
