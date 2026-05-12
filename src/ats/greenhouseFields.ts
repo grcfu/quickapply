@@ -88,7 +88,7 @@ export const greenhouseFieldMap: Record<string, FieldDef> = {
       /^college\*?$/i,
       /^school name\*?$/i,
     ],
-    getValue: (p) => p.identity?.education?.school,
+    getValue: (p) => p.identity?.educations?.[0]?.school,
   },
   gpa: {
     kind: "input",
@@ -97,7 +97,7 @@ export const greenhouseFieldMap: Record<string, FieldDef> = {
       'input[id="gpa"]',
     ],
     labelPatterns: [/^gpa\*?$/i, /grade point average/i],
-    getValue: (p) => p.identity?.education?.gpa,
+    getValue: (p) => p.identity?.educations?.[0]?.gpa,
   },
   graduationDate: {
     kind: "input",
@@ -110,13 +110,13 @@ export const greenhouseFieldMap: Record<string, FieldDef> = {
       /expected graduation/i,
       /^graduation\*?$/i,
     ],
-    getValue: (p) => p.identity?.education?.graduationDate,
+    getValue: (p) => p.identity?.educations?.[0]?.graduationDate,
   },
   degree: {
     kind: "input",
     selectors: ['input[id*="degree"]', 'input[name*="degree"]'],
     labelPatterns: [/^degree\*?$/i, /degree earned/i, /highest degree/i],
-    getValue: (p) => p.identity?.education?.degree,
+    getValue: (p) => p.identity?.educations?.[0]?.degree,
   },
   fieldOfStudy: {
     kind: "input",
@@ -126,7 +126,7 @@ export const greenhouseFieldMap: Record<string, FieldDef> = {
       'input[name*="field_of_study"]',
     ],
     labelPatterns: [/field of study/i, /^major\*?$/i, /^discipline\*?$/i],
-    getValue: (p) => p.identity?.education?.fieldOfStudy,
+    getValue: (p) => p.identity?.educations?.[0]?.fieldOfStudy,
   },
   linkedinUrl: {
     kind: "input",

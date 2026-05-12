@@ -55,7 +55,8 @@ export type Identity = {
   links?: Links;
   demographics?: Demographics;
   workAuth?: WorkAuth;
-  education?: Education;
+  educations?: Education[];
+  experiences?: Experience[];
   eeo?: EEOAnswers;
 };
 

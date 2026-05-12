@@ -9,6 +9,7 @@ import { extractTextFromPdf } from "../resume/extractText";
 import { extractFields } from "../resume/extractFields";
 import type { ExtractedFields } from "../resume/extractFields";
 import { fileToBase64 } from "../resume/fileUtils";
+import type { Education, Experience } from "../types/profile";
 
 type YesNo = "" | "yes" | "no";
 
@@ -35,6 +36,30 @@ function boolToYn(b: boolean | undefined): YesNo {
   return "";
 }
 
+function trimEducation(e: Education): Education {
+  return {
+    school: e.school?.trim() || undefined,
+    degree: e.degree?.trim() || undefined,
+    fieldOfStudy: e.fieldOfStudy?.trim() || undefined,
+    gpa: e.gpa?.trim() || undefined,
+    graduationDate: e.graduationDate?.trim() || undefined,
+  };
+}
+
+function trimExperience(e: Experience): Experience {
+  return {
+    company: e.company?.trim() || undefined,
+    title: e.title?.trim() || undefined,
+    startDate: e.startDate?.trim() || undefined,
+    endDate: e.endDate?.trim() || undefined,
+    description: e.description?.trim() || undefined,
+  };
+}
+
+function hasAnyValue(obj: Record<string, unknown>): boolean {
+  return Object.values(obj).some((v) => v !== undefined && v !== "");
+}
+
 type Props = {
   onComplete: () => void;
   onCancel?: () => void;
@@ -48,11 +73,8 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
   const [citizenship, setCitizenship] = useState("");
   const [workAuthUS, setWorkAuthUS] = useState<YesNo>("");
   const [sponsorship, setSponsorship] = useState<YesNo>("");
-  const [school, setSchool] = useState("");
-  const [degree, setDegree] = useState("");
-  const [fieldOfStudy, setFieldOfStudy] = useState("");
-  const [gpa, setGpa] = useState("");
-  const [graduationDate, setGraduationDate] = useState("");
+  const [educations, setEducations] = useState<Education[]>([{}]);
+  const [experiences, setExperiences] = useState<Experience[]>([]);
   const [linkedin, setLinkedin] = useState("");
   const [github, setGithub] = useState("");
   const [portfolio, setPortfolio] = useState("");
@@ -85,14 +107,11 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
       }
       setWorkAuthUS(boolToYn(identity.workAuth?.authorizedToWorkInUS));
       setSponsorship(boolToYn(identity.workAuth?.requiresSponsorship));
-      if (identity.education?.school) setSchool(identity.education.school);
-      if (identity.education?.degree) setDegree(identity.education.degree);
-      if (identity.education?.fieldOfStudy) {
-        setFieldOfStudy(identity.education.fieldOfStudy);
+      if (identity.educations && identity.educations.length > 0) {
+        setEducations(identity.educations);
       }
-      if (identity.education?.gpa) setGpa(identity.education.gpa);
-      if (identity.education?.graduationDate) {
-        setGraduationDate(identity.education.graduationDate);
+      if (identity.experiences) {
+        setExperiences(identity.experiences);
       }
       if (identity.links?.linkedin) setLinkedin(identity.links.linkedin);
       if (identity.links?.github) setGithub(identity.links.github);
@@ -114,6 +133,34 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
     })();
   }, []);
 
+  function updateEducation(idx: number, patch: Partial<Education>) {
+    setEducations((prev) =>
+      prev.map((e, i) => (i === idx ? { ...e, ...patch } : e)),
+    );
+  }
+
+  function addEducation() {
+    setEducations((prev) => [...prev, {}]);
+  }
+
+  function removeEducation(idx: number) {
+    setEducations((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  function updateExperience(idx: number, patch: Partial<Experience>) {
+    setExperiences((prev) =>
+      prev.map((e, i) => (i === idx ? { ...e, ...patch } : e)),
+    );
+  }
+
+  function addExperience() {
+    setExperiences((prev) => [...prev, {}]);
+  }
+
+  function removeExperience(idx: number) {
+    setExperiences((prev) => prev.filter((_, i) => i !== idx));
+  }
+
   function applyPrefills(extracted: ExtractedFields): string[] {
     const filled: string[] = [];
     if (!firstName && extracted.firstName) {
@@ -132,17 +179,26 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
       setPhone(extracted.phone);
       filled.push("phone");
     }
-    if (!school && extracted.school) {
-      setSchool(extracted.school);
+    const eduPatch: Partial<Education> = {};
+    const firstEdu = educations[0] ?? {};
+    if (!firstEdu.school && extracted.school) {
+      eduPatch.school = extracted.school;
       filled.push("school");
     }
-    if (!gpa && extracted.gpa) {
-      setGpa(extracted.gpa);
+    if (!firstEdu.gpa && extracted.gpa) {
+      eduPatch.gpa = extracted.gpa;
       filled.push("GPA");
     }
-    if (!graduationDate && extracted.graduationDate) {
-      setGraduationDate(extracted.graduationDate);
+    if (!firstEdu.graduationDate && extracted.graduationDate) {
+      eduPatch.graduationDate = extracted.graduationDate;
       filled.push("graduation date");
+    }
+    if (Object.keys(eduPatch).length > 0) {
+      setEducations((prev) => {
+        const next = [...prev];
+        next[0] = { ...(next[0] ?? {}), ...eduPatch };
+        return next;
+      });
     }
     return filled;
   }
@@ -210,6 +266,8 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
     }
     setSaving(true);
     try {
+      const trimmedEducations = educations.map(trimEducation).filter(hasAnyValue);
+      const trimmedExperiences = experiences.map(trimExperience).filter(hasAnyValue);
       await updateProfile({
         identity: {
           legalName: {
@@ -237,13 +295,8 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
             github: github.trim() || undefined,
             portfolio: portfolio.trim() || undefined,
           },
-          education: {
-            school: school.trim() || undefined,
-            degree: degree.trim() || undefined,
-            fieldOfStudy: fieldOfStudy.trim() || undefined,
-            gpa: gpa.trim() || undefined,
-            graduationDate: graduationDate.trim() || undefined,
-          },
+          educations: trimmedEducations.length > 0 ? trimmedEducations : undefined,
+          experiences: trimmedExperiences.length > 0 ? trimmedExperiences : undefined,
           demographics: {
             gender: gender.trim() || undefined,
             pronouns: pronouns.trim() || undefined,
@@ -418,57 +471,165 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
 
       <h2 className="onboarding__section">Education</h2>
 
-      <label className="onboarding__field">
-        <span className="onboarding__label">School</span>
-        <input
-          className="onboarding__input"
-          value={school}
-          onChange={(e) => setSchool(e.target.value)}
-          placeholder="e.g. Vanderbilt University"
-        />
-      </label>
+      {educations.map((edu, idx) => (
+        <div key={idx} className="onboarding__entry">
+          <label className="onboarding__field">
+            <span className="onboarding__label">School</span>
+            <input
+              className="onboarding__input"
+              value={edu.school ?? ""}
+              onChange={(e) =>
+                updateEducation(idx, { school: e.target.value })
+              }
+              placeholder="e.g. Vanderbilt University"
+            />
+          </label>
+          <div className="onboarding__row">
+            <label className="onboarding__field">
+              <span className="onboarding__label">Degree</span>
+              <input
+                className="onboarding__input"
+                value={edu.degree ?? ""}
+                onChange={(e) =>
+                  updateEducation(idx, { degree: e.target.value })
+                }
+                placeholder="e.g. BS"
+              />
+            </label>
+            <label className="onboarding__field">
+              <span className="onboarding__label">Field of study</span>
+              <input
+                className="onboarding__input"
+                value={edu.fieldOfStudy ?? ""}
+                onChange={(e) =>
+                  updateEducation(idx, { fieldOfStudy: e.target.value })
+                }
+                placeholder="e.g. Computer Science"
+              />
+            </label>
+          </div>
+          <div className="onboarding__row">
+            <label className="onboarding__field">
+              <span className="onboarding__label">GPA</span>
+              <input
+                className="onboarding__input"
+                value={edu.gpa ?? ""}
+                onChange={(e) =>
+                  updateEducation(idx, { gpa: e.target.value })
+                }
+                placeholder="e.g. 3.8"
+              />
+            </label>
+            <label className="onboarding__field">
+              <span className="onboarding__label">Graduation date</span>
+              <input
+                className="onboarding__input"
+                value={edu.graduationDate ?? ""}
+                onChange={(e) =>
+                  updateEducation(idx, { graduationDate: e.target.value })
+                }
+                placeholder="e.g. 2026-05"
+              />
+            </label>
+          </div>
+          {educations.length > 1 && (
+            <button
+              type="button"
+              className="onboarding__entry-remove"
+              onClick={() => removeEducation(idx)}
+            >
+              Remove this education
+            </button>
+          )}
+        </div>
+      ))}
+      <button
+        type="button"
+        className="onboarding__entry-add"
+        onClick={addEducation}
+      >
+        + Add another education
+      </button>
 
-      <div className="onboarding__row">
-        <label className="onboarding__field">
-          <span className="onboarding__label">Degree</span>
-          <input
-            className="onboarding__input"
-            value={degree}
-            onChange={(e) => setDegree(e.target.value)}
-            placeholder="e.g. BS"
-          />
-        </label>
-        <label className="onboarding__field">
-          <span className="onboarding__label">Field of study</span>
-          <input
-            className="onboarding__input"
-            value={fieldOfStudy}
-            onChange={(e) => setFieldOfStudy(e.target.value)}
-            placeholder="e.g. Computer Science"
-          />
-        </label>
-      </div>
+      <h2 className="onboarding__section">Experience</h2>
 
-      <div className="onboarding__row">
-        <label className="onboarding__field">
-          <span className="onboarding__label">GPA</span>
-          <input
-            className="onboarding__input"
-            value={gpa}
-            onChange={(e) => setGpa(e.target.value)}
-            placeholder="e.g. 3.8"
-          />
-        </label>
-        <label className="onboarding__field">
-          <span className="onboarding__label">Graduation date</span>
-          <input
-            className="onboarding__input"
-            value={graduationDate}
-            onChange={(e) => setGraduationDate(e.target.value)}
-            placeholder="e.g. 2026-05"
-          />
-        </label>
-      </div>
+      {experiences.map((exp, idx) => (
+        <div key={idx} className="onboarding__entry">
+          <div className="onboarding__row">
+            <label className="onboarding__field">
+              <span className="onboarding__label">Company</span>
+              <input
+                className="onboarding__input"
+                value={exp.company ?? ""}
+                onChange={(e) =>
+                  updateExperience(idx, { company: e.target.value })
+                }
+                placeholder="e.g. Acme Corp"
+              />
+            </label>
+            <label className="onboarding__field">
+              <span className="onboarding__label">Title</span>
+              <input
+                className="onboarding__input"
+                value={exp.title ?? ""}
+                onChange={(e) =>
+                  updateExperience(idx, { title: e.target.value })
+                }
+                placeholder="e.g. Engineering Intern"
+              />
+            </label>
+          </div>
+          <div className="onboarding__row">
+            <label className="onboarding__field">
+              <span className="onboarding__label">Start date</span>
+              <input
+                className="onboarding__input"
+                value={exp.startDate ?? ""}
+                onChange={(e) =>
+                  updateExperience(idx, { startDate: e.target.value })
+                }
+                placeholder="e.g. 2025-05"
+              />
+            </label>
+            <label className="onboarding__field">
+              <span className="onboarding__label">End date</span>
+              <input
+                className="onboarding__input"
+                value={exp.endDate ?? ""}
+                onChange={(e) =>
+                  updateExperience(idx, { endDate: e.target.value })
+                }
+                placeholder="e.g. 2025-08 or Present"
+              />
+            </label>
+          </div>
+          <label className="onboarding__field">
+            <span className="onboarding__label">Description</span>
+            <textarea
+              className="onboarding__input onboarding__textarea"
+              value={exp.description ?? ""}
+              onChange={(e) =>
+                updateExperience(idx, { description: e.target.value })
+              }
+              rows={3}
+            />
+          </label>
+          <button
+            type="button"
+            className="onboarding__entry-remove"
+            onClick={() => removeExperience(idx)}
+          >
+            Remove this experience
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        className="onboarding__entry-add"
+        onClick={addExperience}
+      >
+        + Add experience
+      </button>
 
       <h2 className="onboarding__section">Address</h2>
 
