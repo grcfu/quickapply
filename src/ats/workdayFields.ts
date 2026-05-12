@@ -113,6 +113,35 @@ export const workdayFields: Record<string, FieldDef> = {
     labelPatterns: [/citizenship status/i, /^citizenship$/i],
     getValue: (p) => p.identity?.workAuth?.citizenshipStatus,
   },
+  linkedinUrl: {
+    kind: "input",
+    selectors: [
+      'input[data-automation-id="linkedinQuestion"]',
+      'input[data-automation-id*="linkedIn" i]',
+      'input[data-automation-id*="linkedin" i]',
+    ],
+    labelPatterns: [/linkedin( url| profile)?/i],
+    getValue: (p) => p.identity?.links?.linkedin,
+  },
+  githubUrl: {
+    kind: "input",
+    selectors: ['input[data-automation-id*="github" i]'],
+    labelPatterns: [/github( url| profile)?/i],
+    getValue: (p) => p.identity?.links?.github,
+  },
+  portfolioUrl: {
+    kind: "input",
+    selectors: [
+      'input[data-automation-id*="portfolio" i]',
+      'input[data-automation-id*="website" i]',
+    ],
+    labelPatterns: [
+      /^portfolio( url)?\*?$/i,
+      /personal website/i,
+      /^website( url)?\*?$/i,
+    ],
+    getValue: (p) => p.identity?.links?.portfolio,
+  },
   gender: {
     kind: "select",
     labelPatterns: [/^gender\*?$/i, /gender identity/i],

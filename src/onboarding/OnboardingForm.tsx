@@ -49,8 +49,13 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
   const [workAuthUS, setWorkAuthUS] = useState<YesNo>("");
   const [sponsorship, setSponsorship] = useState<YesNo>("");
   const [school, setSchool] = useState("");
+  const [degree, setDegree] = useState("");
+  const [fieldOfStudy, setFieldOfStudy] = useState("");
   const [gpa, setGpa] = useState("");
   const [graduationDate, setGraduationDate] = useState("");
+  const [linkedin, setLinkedin] = useState("");
+  const [github, setGithub] = useState("");
+  const [portfolio, setPortfolio] = useState("");
   const [street, setStreet] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
@@ -81,10 +86,17 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
       setWorkAuthUS(boolToYn(identity.workAuth?.authorizedToWorkInUS));
       setSponsorship(boolToYn(identity.workAuth?.requiresSponsorship));
       if (identity.education?.school) setSchool(identity.education.school);
+      if (identity.education?.degree) setDegree(identity.education.degree);
+      if (identity.education?.fieldOfStudy) {
+        setFieldOfStudy(identity.education.fieldOfStudy);
+      }
       if (identity.education?.gpa) setGpa(identity.education.gpa);
       if (identity.education?.graduationDate) {
         setGraduationDate(identity.education.graduationDate);
       }
+      if (identity.links?.linkedin) setLinkedin(identity.links.linkedin);
+      if (identity.links?.github) setGithub(identity.links.github);
+      if (identity.links?.portfolio) setPortfolio(identity.links.portfolio);
       const addr = identity.contact?.address;
       if (addr?.street) setStreet(addr.street);
       if (addr?.city) setCity(addr.city);
@@ -220,8 +232,15 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
             authorizedToWorkInUS: ynToBool(workAuthUS),
             requiresSponsorship: ynToBool(sponsorship),
           },
+          links: {
+            linkedin: linkedin.trim() || undefined,
+            github: github.trim() || undefined,
+            portfolio: portfolio.trim() || undefined,
+          },
           education: {
             school: school.trim() || undefined,
+            degree: degree.trim() || undefined,
+            fieldOfStudy: fieldOfStudy.trim() || undefined,
             gpa: gpa.trim() || undefined,
             graduationDate: graduationDate.trim() || undefined,
           },
@@ -321,6 +340,41 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
         />
       </label>
 
+      <h2 className="onboarding__section">Links</h2>
+
+      <label className="onboarding__field">
+        <span className="onboarding__label">LinkedIn</span>
+        <input
+          className="onboarding__input"
+          type="url"
+          value={linkedin}
+          onChange={(e) => setLinkedin(e.target.value)}
+          placeholder="https://linkedin.com/in/yourname"
+        />
+      </label>
+
+      <label className="onboarding__field">
+        <span className="onboarding__label">GitHub</span>
+        <input
+          className="onboarding__input"
+          type="url"
+          value={github}
+          onChange={(e) => setGithub(e.target.value)}
+          placeholder="https://github.com/yourname"
+        />
+      </label>
+
+      <label className="onboarding__field">
+        <span className="onboarding__label">Portfolio / website</span>
+        <input
+          className="onboarding__input"
+          type="url"
+          value={portfolio}
+          onChange={(e) => setPortfolio(e.target.value)}
+          placeholder="https://yourname.dev"
+        />
+      </label>
+
       <h2 className="onboarding__section">Work authorization</h2>
 
       <label className="onboarding__field">
@@ -373,6 +427,27 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
           placeholder="e.g. Vanderbilt University"
         />
       </label>
+
+      <div className="onboarding__row">
+        <label className="onboarding__field">
+          <span className="onboarding__label">Degree</span>
+          <input
+            className="onboarding__input"
+            value={degree}
+            onChange={(e) => setDegree(e.target.value)}
+            placeholder="e.g. BS"
+          />
+        </label>
+        <label className="onboarding__field">
+          <span className="onboarding__label">Field of study</span>
+          <input
+            className="onboarding__input"
+            value={fieldOfStudy}
+            onChange={(e) => setFieldOfStudy(e.target.value)}
+            placeholder="e.g. Computer Science"
+          />
+        </label>
+      </div>
 
       <div className="onboarding__row">
         <label className="onboarding__field">

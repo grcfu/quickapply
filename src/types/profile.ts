@@ -35,8 +35,16 @@ export type WorkAuth = {
 
 export type Education = {
   school?: string;
+  degree?: string;
+  fieldOfStudy?: string;
   gpa?: string;
   graduationDate?: string;
+};
+
+export type Links = {
+  linkedin?: string;
+  github?: string;
+  portfolio?: string;
 };
 
 export type EEOAnswers = Record<string, string | string[] | undefined>;
@@ -44,6 +52,7 @@ export type EEOAnswers = Record<string, string | string[] | undefined>;
 export type Identity = {
   legalName?: LegalName;
   contact?: Contact;
+  links?: Links;
   demographics?: Demographics;
   workAuth?: WorkAuth;
   education?: Education;

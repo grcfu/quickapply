@@ -112,6 +112,49 @@ export const greenhouseFieldMap: Record<string, FieldDef> = {
     ],
     getValue: (p) => p.identity?.education?.graduationDate,
   },
+  degree: {
+    kind: "input",
+    selectors: ['input[id*="degree"]', 'input[name*="degree"]'],
+    labelPatterns: [/^degree\*?$/i, /degree earned/i, /highest degree/i],
+    getValue: (p) => p.identity?.education?.degree,
+  },
+  fieldOfStudy: {
+    kind: "input",
+    selectors: [
+      'input[id*="field_of_study"]',
+      'input[id*="major"]',
+      'input[name*="field_of_study"]',
+    ],
+    labelPatterns: [/field of study/i, /^major\*?$/i, /^discipline\*?$/i],
+    getValue: (p) => p.identity?.education?.fieldOfStudy,
+  },
+  linkedinUrl: {
+    kind: "input",
+    selectors: ['input[id*="linkedin"]', 'input[name*="linkedin"]'],
+    labelPatterns: [/linkedin( url| profile)?/i],
+    getValue: (p) => p.identity?.links?.linkedin,
+  },
+  githubUrl: {
+    kind: "input",
+    selectors: ['input[id*="github"]', 'input[name*="github"]'],
+    labelPatterns: [/github( url| profile)?/i],
+    getValue: (p) => p.identity?.links?.github,
+  },
+  portfolioUrl: {
+    kind: "input",
+    selectors: [
+      'input[id*="portfolio"]',
+      'input[id*="website"]',
+      'input[name*="portfolio"]',
+      'input[name*="website"]',
+    ],
+    labelPatterns: [
+      /^portfolio( url)?\*?$/i,
+      /personal website/i,
+      /^website( url)?\*?$/i,
+    ],
+    getValue: (p) => p.identity?.links?.portfolio,
+  },
   street: {
     kind: "input",
     selectors: [

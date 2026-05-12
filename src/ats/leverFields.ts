@@ -40,6 +40,39 @@ export const leverFields: Record<string, FieldDef> = {
     labelPatterns: [/^phone\*?$/i],
     getValue: (p) => p.identity?.contact?.phone,
   },
+  linkedinUrl: {
+    kind: "input",
+    selectors: [
+      'input[name="urls[LinkedIn]"]',
+      'input[name="urls[Linkedin]"]',
+    ],
+    labelPatterns: [/linkedin( url| profile)?/i],
+    getValue: (p) => p.identity?.links?.linkedin,
+  },
+  githubUrl: {
+    kind: "input",
+    selectors: [
+      'input[name="urls[GitHub]"]',
+      'input[name="urls[Github]"]',
+    ],
+    labelPatterns: [/github( url| profile)?/i],
+    getValue: (p) => p.identity?.links?.github,
+  },
+  portfolioUrl: {
+    kind: "input",
+    selectors: [
+      'input[name="urls[Portfolio]"]',
+      'input[name="urls[Other]"]',
+      'input[name="urls[Website]"]',
+    ],
+    labelPatterns: [
+      /^portfolio( url)?\*?$/i,
+      /personal website/i,
+      /^website( url)?\*?$/i,
+      /^other website/i,
+    ],
+    getValue: (p) => p.identity?.links?.portfolio,
+  },
   raceEthnicity: {
     kind: "multi-checkbox",
     labelPatterns: [
