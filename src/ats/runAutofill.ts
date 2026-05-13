@@ -298,6 +298,81 @@ function fillFileField(
   }
 }
 
+function tokensOf(s: string): string[] {
+  return s
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((t) => t.length >= 3);
+}
+
+function inputFromLabel(
+  label: Element,
+): HTMLInputElement | HTMLTextAreaElement | null {
+  const forId = label.getAttribute("for");
+  if (forId) {
+    const el = document.getElementById(forId);
+    if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+      return el;
+    }
+  }
+  const nested = label.querySelector("input, textarea");
+  if (
+    nested instanceof HTMLInputElement ||
+    nested instanceof HTMLTextAreaElement
+  ) {
+    return nested;
+  }
+  return null;
+}
+
+function findInputByQuestion(
+  question: string,
+): HTMLInputElement | HTMLTextAreaElement | null {
+  const target = question.trim().toLowerCase();
+  if (!target) return null;
+  const candidates: {
+    label: string;
+    el: HTMLInputElement | HTMLTextAreaElement;
+  }[] = [];
+  for (const lbl of Array.from(document.querySelectorAll("label"))) {
+    const text = (lbl.textContent ?? "").trim().toLowerCase();
+    if (!text) continue;
+    const el = inputFromLabel(lbl);
+    if (!el) continue;
+    candidates.push({ label: text, el });
+  }
+  const exact = candidates.find((c) => c.label === target);
+  if (exact) return exact.el;
+  const subs = candidates.filter(
+    (c) => c.label.includes(target) || target.includes(c.label),
+  );
+  if (subs.length > 0) {
+    subs.sort((a, b) => a.label.length - b.label.length);
+    return subs[0].el;
+  }
+  const targetTokens = new Set(tokensOf(target));
+  if (targetTokens.size === 0) return null;
+  let best: {
+    el: HTMLInputElement | HTMLTextAreaElement;
+    score: number;
+  } | null = null;
+  for (const c of candidates) {
+    const labelTokens = tokensOf(c.label);
+    if (labelTokens.length === 0) continue;
+    let overlap = 0;
+    for (const t of labelTokens) if (targetTokens.has(t)) overlap++;
+    if (overlap === 0) continue;
+    if (overlap / targetTokens.size < 0.5) continue;
+    if (!best || overlap > best.score) best = { el: c.el, score: overlap };
+  }
+  return best ? best.el : null;
+}
+
+function truncate(s: string, max: number): string {
+  if (s.length <= max) return s;
+  return s.substring(0, max - 1) + "…";
+}
+
 function fillMultiCheckboxField(
   key: string,
   def: MultiCheckboxFieldDef,
@@ -379,6 +454,13 @@ export async function runAutofill(): Promise<AutofillResponse> {
     } else {
       skipped.push(result.reason);
     }
+  }
+  for (const answer of profile.answers ?? []) {
+    const input = findInputByQuestion(answer.question);
+    if (!input) continue;
+    if (input.value.trim() !== "") continue;
+    setReactValue(input, answer.answer);
+    fields.push(`answer: "${truncate(answer.question, 40)}"`);
   }
   return { ok: true, filled: fields.length, fields, skipped };
 }
