@@ -87,28 +87,43 @@ export function ResumeManager() {
         <p className="resumes__empty">No resumes yet.</p>
       ) : (
         <ul className="resumes__list">
-          {resumes.map((r) => (
-            <li key={r.id} className="resumes__item">
-              <input
-                type="radio"
-                name="defaultResume"
-                className="resumes__default"
-                checked={r.id === defaultId}
-                onChange={() => onSetDefault(r.id)}
-                aria-label={`Use ${r.originalFile?.filename ?? r.name} as default`}
-              />
-              <span className="resumes__name">
-                {r.originalFile?.filename ?? r.name}
-              </span>
-              <button
-                type="button"
-                className="resumes__remove"
-                onClick={() => onRemove(r.id)}
+          {resumes.map((r) => {
+            const isDefault = r.id === defaultId;
+            return (
+              <li
+                key={r.id}
+                className={
+                  isDefault
+                    ? "resumes__item resumes__item--default"
+                    : "resumes__item"
+                }
               >
-                Remove
-              </button>
-            </li>
-          ))}
+                <input
+                  type="radio"
+                  name="defaultResume"
+                  className="resumes__default"
+                  checked={isDefault}
+                  onChange={() => onSetDefault(r.id)}
+                  aria-label={`Use ${
+                    r.originalFile?.filename ?? r.name
+                  } as default`}
+                />
+                <span className="resumes__name">
+                  {r.originalFile?.filename ?? r.name}
+                </span>
+                {isDefault && (
+                  <span className="resumes__default-badge">Default</span>
+                )}
+                <button
+                  type="button"
+                  className="resumes__remove"
+                  onClick={() => onRemove(r.id)}
+                >
+                  Remove
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
       <label className="resumes__add">

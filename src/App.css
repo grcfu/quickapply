@@ -145,7 +145,12 @@
 
 .resumes__empty {
   margin: 0;
+  padding: 14px;
+  text-align: center;
   color: var(--text-faint);
+  background: var(--bg-subtle);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
 }
 
 .resumes__list {
@@ -160,11 +165,33 @@
 .resumes__item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 6px;
+  gap: 8px;
+  padding: 8px 10px;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-md);
+  transition:
+    border-color var(--t-fast),
+    background var(--t-fast);
+}
+
+.resumes__item--default {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.resumes__default-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent-text);
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
 }
 
 .resumes__default {
@@ -209,6 +236,28 @@
   font: inherit;
   font-size: 11px;
   color: var(--text-muted);
+  width: 100%;
+}
+
+.resumes__add input[type="file"]::file-selector-button {
+  font: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 5px 10px;
+  margin-right: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  transition:
+    background var(--t-fast),
+    border-color var(--t-fast);
+}
+
+.resumes__add input[type="file"]::file-selector-button:hover {
+  background: var(--bg-muted);
+  border-color: var(--border-strong);
 }
 
 .resumes__error {
@@ -218,7 +267,12 @@
 
 .answers__empty {
   margin: 0;
+  padding: 14px;
+  text-align: center;
   color: var(--text-faint);
+  background: var(--bg-subtle);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
   line-height: 1.5;
 }
 
@@ -234,17 +288,23 @@
 .answers__item {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 6px 8px;
+  gap: 4px;
+  padding: 9px 10px;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-md);
+  transition: border-color var(--t-fast);
+}
+
+.answers__item:hover {
+  border-color: var(--border-strong);
 }
 
 .answers__q {
   font-weight: 600;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text);
+  line-height: 1.4;
 }
 
 .answers__a {
@@ -254,6 +314,7 @@
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  line-height: 1.5;
 }
 
 .answers__remove {
