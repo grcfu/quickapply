@@ -11,10 +11,14 @@
 
 .app__title {
   margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.018em;
   color: var(--text);
+}
+
+.app__title::first-letter {
+  color: var(--accent);
 }
 
 .app__header-right {
@@ -28,27 +32,27 @@
   font: inherit;
   font-size: 11px;
   font-weight: 500;
-  padding: 4px 8px;
+  padding: 5px 10px;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: var(--bg);
   color: var(--text-muted);
   cursor: pointer;
   transition:
-    background 80ms ease,
-    border-color 80ms ease,
-    color 80ms ease;
+    background var(--t-fast),
+    border-color var(--t-fast),
+    color var(--t-fast);
 }
 
 .app__header-btn:hover {
-  background: var(--bg-muted);
-  border-color: var(--border-strong);
-  color: var(--text);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-text);
 }
 
 .app__header-btn:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline: none;
+  box-shadow: var(--ring);
 }
 
 .app__tag {
@@ -350,9 +354,15 @@
 }
 
 .answers__add-btn:hover {
-  background: var(--bg-muted);
-  border-color: var(--border-strong);
-  color: var(--text);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.answers__add-btn:focus-visible {
+  outline: none;
+  border-style: solid;
+  box-shadow: var(--ring);
 }
 
 .answers__form {
@@ -391,9 +401,9 @@
 }
 
 .answers__input:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -1px;
+  outline: none;
   border-color: var(--accent);
+  box-shadow: var(--ring);
 }
 
 .answers__actions {
@@ -427,11 +437,29 @@
   background: var(--accent);
   border: 1px solid var(--accent);
   color: #ffffff;
+  box-shadow: var(--shadow-sm);
+  transition:
+    background var(--t-fast),
+    border-color var(--t-fast),
+    box-shadow var(--t-fast);
 }
 
 .answers__save:hover {
-  background: #000000;
-  border-color: #000000;
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  box-shadow: var(--shadow-md);
+}
+
+.answers__save:focus-visible {
+  outline: none;
+  box-shadow:
+    var(--ring),
+    var(--shadow-sm);
+}
+
+.answers__cancel:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
 }
 
 .answers__error {
@@ -558,8 +586,8 @@
 }
 
 .debug__btn:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline: none;
+  box-shadow: var(--ring);
 }
 
 .debug__btn--danger {
@@ -779,10 +807,16 @@
   width: 100%;
 }
 
+.onboarding__input {
+  transition:
+    border-color var(--t-fast),
+    box-shadow var(--t-fast);
+}
+
 .onboarding__input:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -1px;
+  outline: none;
   border-color: var(--accent);
+  box-shadow: var(--ring);
 }
 
 .onboarding__feedback {
@@ -805,26 +839,35 @@
   font-size: 13px;
   font-weight: 600;
   padding: 10px 12px;
-  margin-top: 4px;
   border: 1px solid var(--accent);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: var(--accent);
   color: #ffffff;
   cursor: pointer;
+  box-shadow: var(--shadow-sm);
   transition:
-    background 80ms ease,
-    border-color 80ms ease,
-    opacity 80ms ease;
+    background var(--t-fast),
+    border-color var(--t-fast),
+    box-shadow var(--t-fast);
 }
 
 .onboarding__submit:hover:not(:disabled) {
-  background: #000000;
-  border-color: #000000;
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  box-shadow: var(--shadow-md);
+}
+
+.onboarding__submit:active:not(:disabled) {
+  background: var(--accent-active);
+  border-color: var(--accent-active);
+  box-shadow: var(--shadow-sm);
 }
 
 .onboarding__submit:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow:
+    var(--ring),
+    var(--shadow-sm);
 }
 
 .onboarding__submit:disabled {
@@ -864,8 +907,8 @@
 }
 
 .onboarding__cancel:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: var(--ring);
 }
 
 .onboarding__cancel:disabled {
@@ -915,9 +958,15 @@
 }
 
 .onboarding__entry-add:hover {
-  background: var(--bg-muted);
-  border-color: var(--border-strong);
-  color: var(--text);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.onboarding__entry-add:focus-visible {
+  outline: none;
+  border-style: solid;
+  box-shadow: var(--ring);
 }
 
 .onboarding__textarea {
