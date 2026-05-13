@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { ChangeEvent, FormEvent } from "react";
+import type { ChangeEvent, FormEvent, ReactNode } from "react";
 import {
   addResume,
   getProfile,
@@ -58,6 +58,25 @@ function trimExperience(e: Experience): Experience {
 
 function hasAnyValue(obj: Record<string, unknown>): boolean {
   return Object.values(obj).some((v) => v !== undefined && v !== "");
+}
+
+function Section({
+  title,
+  open = true,
+  children,
+}: {
+  title: string;
+  open?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <details className="section" open={open}>
+      <summary className="section__summary">
+        <span className="section__title">{title}</span>
+      </summary>
+      <div className="section__body">{children}</div>
+    </details>
+  );
 }
 
 type Props = {
@@ -323,464 +342,465 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
           : "Fill these in once. QuickApply will reuse them on every application."}
       </p>
 
-      <h2 className="onboarding__section">Resume</h2>
-      <p className="onboarding__hint">
-        Upload a PDF — we'll save it and try to prefill the fields below.
-        Manage saved resumes in the main view.
-      </p>
-      <input
-        type="file"
-        accept=".pdf,.doc,.docx,application/pdf"
-        onChange={onResumeFile}
-        className="onboarding__file"
-      />
-      {resumeFeedback && (
-        <p className="onboarding__feedback onboarding__feedback--ok">
-          {resumeFeedback}
+      <Section title="Resume">
+        <p className="onboarding__hint">
+          Upload a PDF — we'll save it and try to prefill the fields below.
+          Manage saved resumes in the main view.
         </p>
-      )}
-      {resumeError && (
-        <p className="onboarding__feedback onboarding__feedback--err">
-          {resumeError}
-        </p>
-      )}
-
-      <h2 className="onboarding__section">Personal</h2>
-
-      <div className="onboarding__row">
-        <label className="onboarding__field">
-          <span className="onboarding__label">First name</span>
-          <input
-            className="onboarding__input"
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-            autoComplete="given-name"
-            required
-          />
-        </label>
-        <label className="onboarding__field">
-          <span className="onboarding__label">Last name</span>
-          <input
-            className="onboarding__input"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            autoComplete="family-name"
-            required
-          />
-        </label>
-      </div>
-
-      <label className="onboarding__field">
-        <span className="onboarding__label">Email</span>
         <input
-          className="onboarding__input"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          autoComplete="email"
-          required
+          type="file"
+          accept=".pdf,.doc,.docx,application/pdf"
+          onChange={onResumeFile}
+          className="onboarding__file"
         />
-      </label>
+        {resumeFeedback && (
+          <p className="onboarding__feedback onboarding__feedback--ok">
+            {resumeFeedback}
+          </p>
+        )}
+        {resumeError && (
+          <p className="onboarding__feedback onboarding__feedback--err">
+            {resumeError}
+          </p>
+        )}
+      </Section>
 
-      <label className="onboarding__field">
-        <span className="onboarding__label">Phone</span>
-        <input
-          className="onboarding__input"
-          type="tel"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          autoComplete="tel"
-        />
-      </label>
-
-      <h2 className="onboarding__section">Links</h2>
-
-      <label className="onboarding__field">
-        <span className="onboarding__label">LinkedIn</span>
-        <input
-          className="onboarding__input"
-          type="url"
-          value={linkedin}
-          onChange={(e) => setLinkedin(e.target.value)}
-          placeholder="https://linkedin.com/in/yourname"
-        />
-      </label>
-
-      <label className="onboarding__field">
-        <span className="onboarding__label">GitHub</span>
-        <input
-          className="onboarding__input"
-          type="url"
-          value={github}
-          onChange={(e) => setGithub(e.target.value)}
-          placeholder="https://github.com/yourname"
-        />
-      </label>
-
-      <label className="onboarding__field">
-        <span className="onboarding__label">Portfolio / website</span>
-        <input
-          className="onboarding__input"
-          type="url"
-          value={portfolio}
-          onChange={(e) => setPortfolio(e.target.value)}
-          placeholder="https://yourname.dev"
-        />
-      </label>
-
-      <h2 className="onboarding__section">Work authorization</h2>
-
-      <label className="onboarding__field">
-        <span className="onboarding__label">Citizenship status</span>
-        <input
-          className="onboarding__input"
-          value={citizenship}
-          onChange={(e) => setCitizenship(e.target.value)}
-          placeholder="e.g. US Citizen"
-        />
-      </label>
-
-      <div className="onboarding__row">
-        <label className="onboarding__field">
-          <span className="onboarding__label">
-            Authorized to work in US?
-          </span>
-          <select
-            className="onboarding__input"
-            value={workAuthUS}
-            onChange={(e) => setWorkAuthUS(e.target.value as YesNo)}
-          >
-            <option value="">—</option>
-            <option value="yes">Yes</option>
-            <option value="no">No</option>
-          </select>
-        </label>
-        <label className="onboarding__field">
-          <span className="onboarding__label">Requires sponsorship?</span>
-          <select
-            className="onboarding__input"
-            value={sponsorship}
-            onChange={(e) => setSponsorship(e.target.value as YesNo)}
-          >
-            <option value="">—</option>
-            <option value="yes">Yes</option>
-            <option value="no">No</option>
-          </select>
-        </label>
-      </div>
-
-      <h2 className="onboarding__section">Education</h2>
-
-      {educations.map((edu, idx) => (
-        <div key={idx} className="onboarding__entry">
+      <Section title="Personal">
+        <div className="onboarding__row">
           <label className="onboarding__field">
-            <span className="onboarding__label">School</span>
+            <span className="onboarding__label">First name</span>
             <input
               className="onboarding__input"
-              value={edu.school ?? ""}
-              onChange={(e) =>
-                updateEducation(idx, { school: e.target.value })
-              }
-              placeholder="e.g. Vanderbilt University"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              autoComplete="given-name"
+              required
             />
           </label>
-          <div className="onboarding__row">
+          <label className="onboarding__field">
+            <span className="onboarding__label">Last name</span>
+            <input
+              className="onboarding__input"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              autoComplete="family-name"
+              required
+            />
+          </label>
+        </div>
+
+        <label className="onboarding__field">
+          <span className="onboarding__label">Email</span>
+          <input
+            className="onboarding__input"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+            required
+          />
+        </label>
+
+        <label className="onboarding__field">
+          <span className="onboarding__label">Phone</span>
+          <input
+            className="onboarding__input"
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            autoComplete="tel"
+          />
+        </label>
+      </Section>
+
+      <Section title="Links">
+        <label className="onboarding__field">
+          <span className="onboarding__label">LinkedIn</span>
+          <input
+            className="onboarding__input"
+            type="url"
+            value={linkedin}
+            onChange={(e) => setLinkedin(e.target.value)}
+            placeholder="https://linkedin.com/in/yourname"
+          />
+        </label>
+        <label className="onboarding__field">
+          <span className="onboarding__label">GitHub</span>
+          <input
+            className="onboarding__input"
+            type="url"
+            value={github}
+            onChange={(e) => setGithub(e.target.value)}
+            placeholder="https://github.com/yourname"
+          />
+        </label>
+        <label className="onboarding__field">
+          <span className="onboarding__label">Portfolio / website</span>
+          <input
+            className="onboarding__input"
+            type="url"
+            value={portfolio}
+            onChange={(e) => setPortfolio(e.target.value)}
+            placeholder="https://yourname.dev"
+          />
+        </label>
+      </Section>
+
+      <Section title="Work authorization">
+        <label className="onboarding__field">
+          <span className="onboarding__label">Citizenship status</span>
+          <input
+            className="onboarding__input"
+            value={citizenship}
+            onChange={(e) => setCitizenship(e.target.value)}
+            placeholder="e.g. US Citizen"
+          />
+        </label>
+
+        <div className="onboarding__row">
+          <label className="onboarding__field">
+            <span className="onboarding__label">
+              Authorized to work in US?
+            </span>
+            <select
+              className="onboarding__input"
+              value={workAuthUS}
+              onChange={(e) => setWorkAuthUS(e.target.value as YesNo)}
+            >
+              <option value="">—</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </label>
+          <label className="onboarding__field">
+            <span className="onboarding__label">Requires sponsorship?</span>
+            <select
+              className="onboarding__input"
+              value={sponsorship}
+              onChange={(e) => setSponsorship(e.target.value as YesNo)}
+            >
+              <option value="">—</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </label>
+        </div>
+      </Section>
+
+      <Section title="Education">
+        {educations.map((edu, idx) => (
+          <div key={idx} className="onboarding__entry">
             <label className="onboarding__field">
-              <span className="onboarding__label">Degree</span>
+              <span className="onboarding__label">School</span>
               <input
                 className="onboarding__input"
-                value={edu.degree ?? ""}
+                value={edu.school ?? ""}
                 onChange={(e) =>
-                  updateEducation(idx, { degree: e.target.value })
+                  updateEducation(idx, { school: e.target.value })
                 }
-                placeholder="e.g. BS"
+                placeholder="e.g. Vanderbilt University"
               />
             </label>
-            <label className="onboarding__field">
-              <span className="onboarding__label">Field of study</span>
-              <input
-                className="onboarding__input"
-                value={edu.fieldOfStudy ?? ""}
-                onChange={(e) =>
-                  updateEducation(idx, { fieldOfStudy: e.target.value })
-                }
-                placeholder="e.g. Computer Science"
-              />
-            </label>
+            <div className="onboarding__row">
+              <label className="onboarding__field">
+                <span className="onboarding__label">Degree</span>
+                <input
+                  className="onboarding__input"
+                  value={edu.degree ?? ""}
+                  onChange={(e) =>
+                    updateEducation(idx, { degree: e.target.value })
+                  }
+                  placeholder="e.g. BS"
+                />
+              </label>
+              <label className="onboarding__field">
+                <span className="onboarding__label">Field of study</span>
+                <input
+                  className="onboarding__input"
+                  value={edu.fieldOfStudy ?? ""}
+                  onChange={(e) =>
+                    updateEducation(idx, { fieldOfStudy: e.target.value })
+                  }
+                  placeholder="e.g. Computer Science"
+                />
+              </label>
+            </div>
+            <div className="onboarding__row">
+              <label className="onboarding__field">
+                <span className="onboarding__label">GPA</span>
+                <input
+                  className="onboarding__input"
+                  value={edu.gpa ?? ""}
+                  onChange={(e) =>
+                    updateEducation(idx, { gpa: e.target.value })
+                  }
+                  placeholder="e.g. 3.8"
+                />
+              </label>
+              <label className="onboarding__field">
+                <span className="onboarding__label">Graduation date</span>
+                <input
+                  className="onboarding__input"
+                  value={edu.graduationDate ?? ""}
+                  onChange={(e) =>
+                    updateEducation(idx, { graduationDate: e.target.value })
+                  }
+                  placeholder="e.g. 2026-05"
+                />
+              </label>
+            </div>
+            {educations.length > 1 && (
+              <button
+                type="button"
+                className="onboarding__entry-remove"
+                onClick={() => removeEducation(idx)}
+              >
+                Remove this education
+              </button>
+            )}
           </div>
-          <div className="onboarding__row">
+        ))}
+        <button
+          type="button"
+          className="onboarding__entry-add"
+          onClick={addEducation}
+        >
+          + Add another education
+        </button>
+      </Section>
+
+      <Section title="Experience" open={false}>
+        {experiences.map((exp, idx) => (
+          <div key={idx} className="onboarding__entry">
+            <div className="onboarding__row">
+              <label className="onboarding__field">
+                <span className="onboarding__label">Company</span>
+                <input
+                  className="onboarding__input"
+                  value={exp.company ?? ""}
+                  onChange={(e) =>
+                    updateExperience(idx, { company: e.target.value })
+                  }
+                  placeholder="e.g. Acme Corp"
+                />
+              </label>
+              <label className="onboarding__field">
+                <span className="onboarding__label">Title</span>
+                <input
+                  className="onboarding__input"
+                  value={exp.title ?? ""}
+                  onChange={(e) =>
+                    updateExperience(idx, { title: e.target.value })
+                  }
+                  placeholder="e.g. Engineering Intern"
+                />
+              </label>
+            </div>
+            <div className="onboarding__row">
+              <label className="onboarding__field">
+                <span className="onboarding__label">Start date</span>
+                <input
+                  className="onboarding__input"
+                  value={exp.startDate ?? ""}
+                  onChange={(e) =>
+                    updateExperience(idx, { startDate: e.target.value })
+                  }
+                  placeholder="e.g. 2025-05"
+                />
+              </label>
+              <label className="onboarding__field">
+                <span className="onboarding__label">End date</span>
+                <input
+                  className="onboarding__input"
+                  value={exp.endDate ?? ""}
+                  onChange={(e) =>
+                    updateExperience(idx, { endDate: e.target.value })
+                  }
+                  placeholder="e.g. 2025-08 or Present"
+                />
+              </label>
+            </div>
             <label className="onboarding__field">
-              <span className="onboarding__label">GPA</span>
-              <input
-                className="onboarding__input"
-                value={edu.gpa ?? ""}
+              <span className="onboarding__label">Description</span>
+              <textarea
+                className="onboarding__input onboarding__textarea"
+                value={exp.description ?? ""}
                 onChange={(e) =>
-                  updateEducation(idx, { gpa: e.target.value })
+                  updateExperience(idx, { description: e.target.value })
                 }
-                placeholder="e.g. 3.8"
+                rows={3}
               />
             </label>
-            <label className="onboarding__field">
-              <span className="onboarding__label">Graduation date</span>
-              <input
-                className="onboarding__input"
-                value={edu.graduationDate ?? ""}
-                onChange={(e) =>
-                  updateEducation(idx, { graduationDate: e.target.value })
-                }
-                placeholder="e.g. 2026-05"
-              />
-            </label>
-          </div>
-          {educations.length > 1 && (
             <button
               type="button"
               className="onboarding__entry-remove"
-              onClick={() => removeEducation(idx)}
+              onClick={() => removeExperience(idx)}
             >
-              Remove this education
+              Remove this experience
             </button>
-          )}
-        </div>
-      ))}
-      <button
-        type="button"
-        className="onboarding__entry-add"
-        onClick={addEducation}
-      >
-        + Add another education
-      </button>
-
-      <h2 className="onboarding__section">Experience</h2>
-
-      {experiences.map((exp, idx) => (
-        <div key={idx} className="onboarding__entry">
-          <div className="onboarding__row">
-            <label className="onboarding__field">
-              <span className="onboarding__label">Company</span>
-              <input
-                className="onboarding__input"
-                value={exp.company ?? ""}
-                onChange={(e) =>
-                  updateExperience(idx, { company: e.target.value })
-                }
-                placeholder="e.g. Acme Corp"
-              />
-            </label>
-            <label className="onboarding__field">
-              <span className="onboarding__label">Title</span>
-              <input
-                className="onboarding__input"
-                value={exp.title ?? ""}
-                onChange={(e) =>
-                  updateExperience(idx, { title: e.target.value })
-                }
-                placeholder="e.g. Engineering Intern"
-              />
-            </label>
           </div>
-          <div className="onboarding__row">
-            <label className="onboarding__field">
-              <span className="onboarding__label">Start date</span>
-              <input
-                className="onboarding__input"
-                value={exp.startDate ?? ""}
-                onChange={(e) =>
-                  updateExperience(idx, { startDate: e.target.value })
-                }
-                placeholder="e.g. 2025-05"
-              />
-            </label>
-            <label className="onboarding__field">
-              <span className="onboarding__label">End date</span>
-              <input
-                className="onboarding__input"
-                value={exp.endDate ?? ""}
-                onChange={(e) =>
-                  updateExperience(idx, { endDate: e.target.value })
-                }
-                placeholder="e.g. 2025-08 or Present"
-              />
-            </label>
-          </div>
+        ))}
+        <button
+          type="button"
+          className="onboarding__entry-add"
+          onClick={addExperience}
+        >
+          + Add experience
+        </button>
+      </Section>
+
+      <Section title="Address" open={false}>
+        <label className="onboarding__field">
+          <span className="onboarding__label">Street</span>
+          <input
+            className="onboarding__input"
+            value={street}
+            onChange={(e) => setStreet(e.target.value)}
+            autoComplete="street-address"
+          />
+        </label>
+
+        <div className="onboarding__row">
           <label className="onboarding__field">
-            <span className="onboarding__label">Description</span>
-            <textarea
-              className="onboarding__input onboarding__textarea"
-              value={exp.description ?? ""}
-              onChange={(e) =>
-                updateExperience(idx, { description: e.target.value })
-              }
-              rows={3}
+            <span className="onboarding__label">City</span>
+            <input
+              className="onboarding__input"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              autoComplete="address-level2"
             />
           </label>
-          <button
-            type="button"
-            className="onboarding__entry-remove"
-            onClick={() => removeExperience(idx)}
-          >
-            Remove this experience
-          </button>
+          <label className="onboarding__field">
+            <span className="onboarding__label">State / Region</span>
+            <input
+              className="onboarding__input"
+              value={state}
+              onChange={(e) => setState(e.target.value)}
+              autoComplete="address-level1"
+            />
+          </label>
         </div>
-      ))}
-      <button
-        type="button"
-        className="onboarding__entry-add"
-        onClick={addExperience}
-      >
-        + Add experience
-      </button>
 
-      <h2 className="onboarding__section">Address</h2>
-
-      <label className="onboarding__field">
-        <span className="onboarding__label">Street</span>
-        <input
-          className="onboarding__input"
-          value={street}
-          onChange={(e) => setStreet(e.target.value)}
-          autoComplete="street-address"
-        />
-      </label>
-
-      <div className="onboarding__row">
-        <label className="onboarding__field">
-          <span className="onboarding__label">City</span>
-          <input
-            className="onboarding__input"
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-            autoComplete="address-level2"
-          />
-        </label>
-        <label className="onboarding__field">
-          <span className="onboarding__label">State / Region</span>
-          <input
-            className="onboarding__input"
-            value={state}
-            onChange={(e) => setState(e.target.value)}
-            autoComplete="address-level1"
-          />
-        </label>
-      </div>
-
-      <div className="onboarding__row">
-        <label className="onboarding__field">
-          <span className="onboarding__label">ZIP / Postal code</span>
-          <input
-            className="onboarding__input"
-            value={zip}
-            onChange={(e) => setZip(e.target.value)}
-            autoComplete="postal-code"
-          />
-        </label>
-        <label className="onboarding__field">
-          <span className="onboarding__label">Country</span>
-          <input
-            className="onboarding__input"
-            value={country}
-            onChange={(e) => setCountry(e.target.value)}
-            autoComplete="country-name"
-            placeholder="e.g. United States"
-          />
-        </label>
-      </div>
-
-      <h2 className="onboarding__section">Demographics</h2>
-      <p className="onboarding__hint">
-        Optional. Used for the voluntary EEO questions ATS forms ask.
-      </p>
-
-      <div className="onboarding__row">
-        <label className="onboarding__field">
-          <span className="onboarding__label">Gender</span>
-          <input
-            className="onboarding__input"
-            value={gender}
-            onChange={(e) => setGender(e.target.value)}
-            placeholder="e.g. Decline to identify"
-          />
-        </label>
-        <label className="onboarding__field">
-          <span className="onboarding__label">Pronouns</span>
-          <input
-            className="onboarding__input"
-            value={pronouns}
-            onChange={(e) => setPronouns(e.target.value)}
-            placeholder="e.g. they/them"
-          />
-        </label>
-      </div>
-
-      <label className="onboarding__field">
-        <span className="onboarding__label">Veteran status</span>
-        <input
-          className="onboarding__input"
-          value={veteranStatus}
-          onChange={(e) => setVeteranStatus(e.target.value)}
-          placeholder="e.g. I am not a protected veteran"
-        />
-      </label>
-
-      <label className="onboarding__field">
-        <span className="onboarding__label">Disability status</span>
-        <input
-          className="onboarding__input"
-          value={disabilityStatus}
-          onChange={(e) => setDisabilityStatus(e.target.value)}
-          placeholder="e.g. I don't wish to answer"
-        />
-      </label>
-
-      <div className="onboarding__field">
-        <span className="onboarding__label">Race / Ethnicity</span>
-        <div className="onboarding__checkboxes">
-          {RACE_OPTIONS.map((opt) => (
-            <label key={opt} className="onboarding__checkbox-row">
-              <input
-                type="checkbox"
-                checked={raceEthnicity.includes(opt)}
-                onChange={() => toggleRace(opt)}
-              />
-              <span>{opt}</span>
-            </label>
-          ))}
+        <div className="onboarding__row">
+          <label className="onboarding__field">
+            <span className="onboarding__label">ZIP / Postal code</span>
+            <input
+              className="onboarding__input"
+              value={zip}
+              onChange={(e) => setZip(e.target.value)}
+              autoComplete="postal-code"
+            />
+          </label>
+          <label className="onboarding__field">
+            <span className="onboarding__label">Country</span>
+            <input
+              className="onboarding__input"
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+              autoComplete="country-name"
+              placeholder="e.g. United States"
+            />
+          </label>
         </div>
-      </div>
+      </Section>
 
-      {error && (
-        <p className="onboarding__feedback onboarding__feedback--err">
-          {error}
+      <Section title="Demographics" open={false}>
+        <p className="onboarding__hint">
+          Optional. Used for the voluntary EEO questions ATS forms ask.
         </p>
-      )}
 
-      {onCancel ? (
-        <div className="onboarding__actions">
-          <button
-            className="onboarding__cancel"
-            type="button"
-            onClick={onCancel}
-            disabled={saving}
-          >
-            Cancel
-          </button>
+        <div className="onboarding__row">
+          <label className="onboarding__field">
+            <span className="onboarding__label">Gender</span>
+            <input
+              className="onboarding__input"
+              value={gender}
+              onChange={(e) => setGender(e.target.value)}
+              placeholder="e.g. Decline to identify"
+            />
+          </label>
+          <label className="onboarding__field">
+            <span className="onboarding__label">Pronouns</span>
+            <input
+              className="onboarding__input"
+              value={pronouns}
+              onChange={(e) => setPronouns(e.target.value)}
+              placeholder="e.g. they/them"
+            />
+          </label>
+        </div>
+
+        <label className="onboarding__field">
+          <span className="onboarding__label">Veteran status</span>
+          <input
+            className="onboarding__input"
+            value={veteranStatus}
+            onChange={(e) => setVeteranStatus(e.target.value)}
+            placeholder="e.g. I am not a protected veteran"
+          />
+        </label>
+
+        <label className="onboarding__field">
+          <span className="onboarding__label">Disability status</span>
+          <input
+            className="onboarding__input"
+            value={disabilityStatus}
+            onChange={(e) => setDisabilityStatus(e.target.value)}
+            placeholder="e.g. I don't wish to answer"
+          />
+        </label>
+
+        <div className="onboarding__field">
+          <span className="onboarding__label">Race / Ethnicity</span>
+          <div className="onboarding__checkboxes">
+            {RACE_OPTIONS.map((opt) => (
+              <label key={opt} className="onboarding__checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={raceEthnicity.includes(opt)}
+                  onChange={() => toggleRace(opt)}
+                />
+                <span>{opt}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </Section>
+
+      <div className="onboarding__sticky">
+        {error && (
+          <p className="onboarding__feedback onboarding__feedback--err">
+            {error}
+          </p>
+        )}
+        {onCancel ? (
+          <div className="onboarding__actions">
+            <button
+              className="onboarding__cancel"
+              type="button"
+              onClick={onCancel}
+              disabled={saving}
+            >
+              Cancel
+            </button>
+            <button
+              className="onboarding__submit"
+              type="submit"
+              disabled={saving}
+            >
+              {saving ? "Saving…" : "Save changes"}
+            </button>
+          </div>
+        ) : (
           <button
             className="onboarding__submit"
             type="submit"
             disabled={saving}
           >
-            {saving ? "Saving…" : "Save changes"}
+            {saving ? "Saving…" : "Save and continue"}
           </button>
-        </div>
-      ) : (
-        <button
-          className="onboarding__submit"
-          type="submit"
-          disabled={saving}
-        >
-          {saving ? "Saving…" : "Save and continue"}
-        </button>
-      )}
+        )}
+      </div>
     </form>
   );
 }
