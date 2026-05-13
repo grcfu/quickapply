@@ -134,6 +134,13 @@ export async function addAnswer(answer: AnswerEntry): Promise<void> {
   await saveProfile(updated);
 }
 
+export async function removeAnswer(answerId: string): Promise<void> {
+  const existing = await getProfile();
+  if (!existing) return;
+  const answers = (existing.answers ?? []).filter((a) => a.id !== answerId);
+  await saveProfile({ ...existing, answers });
+}
+
 export async function exportProfile(): Promise<string> {
   const env = (await readEnvelope()) ?? {
     schemaVersion: CURRENT_SCHEMA_VERSION,

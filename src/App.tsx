@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { AnswerManager } from "./AnswerManager";
 import { AutofillButton } from "./AutofillButton";
 import { DebugPanel } from "./debug/DebugPanel";
 import { OnboardingForm } from "./onboarding/OnboardingForm";
@@ -54,6 +55,7 @@ function App() {
       {view.kind === "main" && (
         <>
           <ResumeManager />
+          <AnswerManager />
           <AutofillButton />
           <hr className="app__divider" />
           <DebugPanel />

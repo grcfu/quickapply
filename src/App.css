@@ -159,6 +159,190 @@
   color: var(--danger);
 }
 
+.answers {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-subtle);
+  font-size: 11px;
+}
+
+.answers__heading {
+  margin: 0 0 4px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.answers__empty {
+  margin: 0;
+  color: var(--text-faint);
+  line-height: 1.5;
+}
+
+.answers__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.answers__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.answers__q {
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--text);
+}
+
+.answers__a {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.answers__remove {
+  appearance: none;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 6px;
+  margin-top: 2px;
+  align-self: flex-end;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg);
+  color: var(--danger);
+  cursor: pointer;
+}
+
+.answers__remove:hover {
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
+}
+
+.answers__add-btn {
+  appearance: none;
+  font: inherit;
+  font-size: 11px;
+  padding: 6px 10px;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.answers__add-btn:hover {
+  background: var(--bg-muted);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.answers__form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+}
+
+.answers__field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.answers__label {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.answers__input {
+  appearance: none;
+  font: inherit;
+  font-family: inherit;
+  font-size: 12px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  resize: vertical;
+}
+
+.answers__input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+  border-color: var(--accent);
+}
+
+.answers__actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.answers__cancel,
+.answers__save {
+  appearance: none;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.answers__cancel {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.answers__cancel:hover {
+  background: var(--bg-muted);
+}
+
+.answers__save {
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: #ffffff;
+}
+
+.answers__save:hover {
+  background: #000000;
+  border-color: #000000;
+}
+
+.answers__error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 11px;
+}
+
 .autofill {
   display: flex;
   flex-direction: column;
