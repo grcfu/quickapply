@@ -75,8 +75,14 @@ export function ResumeManager() {
   }
 
   return (
-    <section className="resumes">
-      <h2 className="resumes__heading">Resumes</h2>
+    <details className="panel" open>
+      <summary className="panel__summary">
+        <span className="panel__title">Resumes</span>
+        {resumes.length > 0 && (
+          <span className="panel__count">{resumes.length}</span>
+        )}
+      </summary>
+      <div className="panel__body">
       {resumes.length === 0 ? (
         <p className="resumes__empty">No resumes yet.</p>
       ) : (
@@ -113,6 +119,7 @@ export function ResumeManager() {
         />
       </label>
       {error && <p className="resumes__error">{error}</p>}
-    </section>
+      </div>
+    </details>
   );
 }

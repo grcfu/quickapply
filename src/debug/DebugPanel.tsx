@@ -96,9 +96,11 @@ export function DebugPanel() {
   }
 
   return (
-    <section className="debug">
-      <h2 className="debug__section-label">Debug</h2>
-
+    <details className="panel">
+      <summary className="panel__summary">
+        <span className="panel__title">Developer tools</span>
+      </summary>
+      <div className="panel__body debug">
       <div className="debug__grid">
         <button className="debug__btn" onClick={onLoadTest}>
           Load test profile
@@ -161,6 +163,7 @@ export function DebugPanel() {
             : "(no profile in storage)"}
         </pre>
       )}
-    </section>
+      </div>
+    </details>
   );
 }

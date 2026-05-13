@@ -69,8 +69,14 @@ export function AnswerManager() {
   }
 
   return (
-    <section className="answers">
-      <h2 className="answers__heading">Saved answers</h2>
+    <details className="panel">
+      <summary className="panel__summary">
+        <span className="panel__title">Saved answers</span>
+        {answers.length > 0 && (
+          <span className="panel__count">{answers.length}</span>
+        )}
+      </summary>
+      <div className="panel__body">
       {answers.length === 0 ? (
         <p className="answers__empty">
           No saved answers yet. Add common application questions
@@ -143,6 +149,7 @@ export function AnswerManager() {
         </button>
       )}
       {error && <p className="answers__error">{error}</p>}
-    </section>
+      </div>
+    </details>
   );
 }

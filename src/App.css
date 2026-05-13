@@ -65,25 +65,82 @@
   margin: 16px 0;
 }
 
-.resumes {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 8px 10px;
-  margin-bottom: 10px;
+.panel {
+  margin: 0 0 10px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: var(--bg-subtle);
-  font-size: 11px;
+  overflow: hidden;
 }
 
-.resumes__heading {
-  margin: 0 0 4px;
-  font-size: 9px;
+.panel > .panel__summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 12px;
+  font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--text-muted);
+  color: var(--text);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  transition: background var(--t-fast);
+}
+
+.panel > .panel__summary::-webkit-details-marker {
+  display: none;
+}
+
+.panel > .panel__summary::after {
+  content: "";
+  margin-left: auto;
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid var(--text-muted);
+  border-bottom: 1.5px solid var(--text-muted);
+  transform: rotate(45deg);
+  transition: transform var(--t-base);
+}
+
+.panel[open] > .panel__summary::after {
+  transform: rotate(225deg);
+}
+
+.panel > .panel__summary:hover {
+  background: var(--bg-muted);
+}
+
+.panel > .panel__summary:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.panel__title {
+  display: inline-block;
+}
+
+.panel__count {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent-text);
+  background: var(--accent-soft);
+  border-radius: 999px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 12px 12px;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
 }
 
 .resumes__empty {
@@ -157,27 +214,6 @@
 .resumes__error {
   margin: 0;
   color: var(--danger);
-}
-
-.answers {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 8px 10px;
-  margin-bottom: 10px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg-subtle);
-  font-size: 11px;
-}
-
-.answers__heading {
-  margin: 0 0 4px;
-  font-size: 9px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
 }
 
 .answers__empty {

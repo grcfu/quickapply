@@ -54,10 +54,9 @@ function App() {
       )}
       {view.kind === "main" && (
         <>
+          <AutofillButton />
           <ResumeManager />
           <AnswerManager />
-          <AutofillButton />
-          <hr className="app__divider" />
           <DebugPanel />
         </>
       )}
