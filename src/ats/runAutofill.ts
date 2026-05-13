@@ -37,6 +37,107 @@ function findInput(def: InputFieldDef): HTMLInputElement | null {
   return null;
 }
 
+function getButtonLabel(button: HTMLElement): string {
+  const aria = button.getAttribute("aria-label");
+  if (aria?.trim()) return aria.trim();
+  const labelledBy = button.getAttribute("aria-labelledby");
+  if (labelledBy) {
+    const ids = labelledBy.split(/\s+/);
+    const texts = ids
+      .map((id) => document.getElementById(id)?.textContent?.trim() ?? "")
+      .filter(Boolean);
+    if (texts.length > 0) return texts.join(" ");
+  }
+  if (button.id) {
+    const lbl = document.querySelector(`label[for="${CSS.escape(button.id)}"]`);
+    if (lbl) return (lbl.textContent ?? "").trim();
+  }
+  const closest = button.closest("label");
+  if (closest) return (closest.textContent ?? "").trim();
+  const prev = button.previousElementSibling;
+  if (prev?.tagName === "LABEL") return (prev.textContent ?? "").trim();
+  let container: HTMLElement | null = button.parentElement;
+  for (let i = 0; i < 3 && container; i++) {
+    const label = container.querySelector("label");
+    if (label) return (label.textContent ?? "").trim();
+    container = container.parentElement;
+  }
+  return "";
+}
+
+function findDropdownButtonByLabel(def: SelectFieldDef): HTMLElement | null {
+  const buttons = Array.from(
+    document.querySelectorAll<HTMLElement>(
+      'button[aria-haspopup="listbox"], [role="combobox"], button[aria-haspopup="true"]',
+    ),
+  );
+  for (const button of buttons) {
+    const labelText = getButtonLabel(button);
+    if (!labelText) continue;
+    if (def.labelPatterns.some((p) => p.test(labelText))) return button;
+  }
+  return null;
+}
+
+function waitForListbox(timeoutMs: number): Promise<Element | null> {
+  return new Promise((resolve) => {
+    const existing = document.querySelector('[role="listbox"]');
+    if (existing) {
+      resolve(existing);
+      return;
+    }
+    const observer = new MutationObserver(() => {
+      const el = document.querySelector('[role="listbox"]');
+      if (el) {
+        observer.disconnect();
+        resolve(el);
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    setTimeout(() => {
+      observer.disconnect();
+      resolve(null);
+    }, timeoutMs);
+  });
+}
+
+async function clickDropdownAndPickOption(
+  button: HTMLElement,
+  desired: string,
+  timeoutMs = 1500,
+): Promise<boolean> {
+  button.click();
+  const listbox = await waitForListbox(timeoutMs);
+  if (!listbox) return false;
+  const options = Array.from(
+    listbox.querySelectorAll<HTMLElement>('[role="option"]'),
+  ).filter((o) => (o.textContent ?? "").trim().length > 0);
+  if (options.length === 0) {
+    document.body.click();
+    return false;
+  }
+  const target = desired.trim().toLowerCase();
+  const labeled = options.map((el) => ({
+    el,
+    text: (el.textContent ?? "").trim().toLowerCase(),
+  }));
+  const exact = labeled.find((o) => o.text === target);
+  if (exact) {
+    exact.el.click();
+    return true;
+  }
+  const subs = labeled.filter(
+    (o) => o.text.includes(target) || target.includes(o.text),
+  );
+  if (subs.length > 0) {
+    subs.sort((a, b) => a.text.length - b.text.length);
+    subs[0].el.click();
+    return true;
+  }
+  document.body.click();
+  return false;
+}
+
 function findSelectByLabel(def: SelectFieldDef): HTMLSelectElement | null {
   for (const label of Array.from(document.querySelectorAll("label"))) {
     const text = (label.textContent ?? "").trim();
@@ -116,11 +217,11 @@ function findCheckboxByLabel(
   return null;
 }
 
-function fillField(
+async function fillField(
   key: string,
   def: InputFieldDef | SelectFieldDef,
   value: string,
-): { ok: true } | { ok: false; reason: string } {
+): Promise<{ ok: true } | { ok: false; reason: string }> {
   if (def.kind === "input") {
     const el = findInput(def);
     if (!el) return { ok: false, reason: `${key} (field not found)` };
@@ -128,16 +229,27 @@ function fillField(
     return { ok: true };
   }
   const select = findSelectByLabel(def);
-  if (!select) return { ok: false, reason: `${key} (select not found)` };
-  const option = findMatchingOption(select, value);
-  if (!option) {
+  if (select) {
+    const option = findMatchingOption(select, value);
+    if (!option) {
+      return {
+        ok: false,
+        reason: `${key} (no option matched "${value}")`,
+      };
+    }
+    setSelectValue(select, option.value);
+    return { ok: true };
+  }
+  const button = findDropdownButtonByLabel(def);
+  if (button) {
+    const ok = await clickDropdownAndPickOption(button, value);
+    if (ok) return { ok: true };
     return {
       ok: false,
-      reason: `${key} (no option matched "${value}")`,
+      reason: `${key} (workday dropdown: no option matched "${value}")`,
     };
   }
-  setSelectValue(select, option.value);
-  return { ok: true };
+  return { ok: false, reason: `${key} (select not found)` };
 }
 
 function findFileInput(def: FileFieldDef): HTMLInputElement | null {
@@ -260,7 +372,7 @@ export async function runAutofill(): Promise<AutofillResponse> {
         skipped.push(`${key} (no value in profile)`);
         continue;
       }
-      result = fillField(key, def, value);
+      result = await fillField(key, def, value);
     }
     if (result.ok) {
       fields.push(key);
