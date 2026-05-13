@@ -382,57 +382,71 @@
 .autofill {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
 .autofill__btn {
   appearance: none;
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
-  padding: 10px 12px;
-  border: 1px solid var(--accent);
-  border-radius: 6px;
+  letter-spacing: -0.005em;
+  padding: 14px 16px;
+  border: none;
+  border-radius: var(--radius-lg);
   background: var(--accent);
   color: #ffffff;
   cursor: pointer;
+  box-shadow: var(--shadow-sm);
   transition:
-    background 80ms ease,
-    border-color 80ms ease,
-    opacity 80ms ease;
+    background var(--t-fast),
+    box-shadow var(--t-fast),
+    transform var(--t-fast);
 }
 
 .autofill__btn:hover:not(:disabled) {
-  background: #000000;
-  border-color: #000000;
+  background: var(--accent-hover);
+  box-shadow: var(--shadow-md);
 }
 
 .autofill__btn:active:not(:disabled) {
-  background: #000000;
+  background: var(--accent-active);
+  transform: translateY(1px);
+  box-shadow: var(--shadow-sm);
 }
 
 .autofill__btn:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow:
+    var(--ring),
+    var(--shadow-md);
 }
 
 .autofill__btn:disabled {
-  opacity: 0.6;
+  opacity: 0.7;
   cursor: progress;
 }
 
 .autofill__feedback {
   margin: 0;
+  padding: 9px 12px;
   font-size: 11px;
   line-height: 1.5;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
 }
 
 .autofill__feedback--ok {
   color: var(--success);
+  background: var(--success-soft);
+  border-color: var(--success-border);
 }
 
 .autofill__feedback--err {
   color: var(--danger);
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
 }
 
 .debug {
