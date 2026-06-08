@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import type { ChangeEvent, FormEvent, ReactNode } from "react";
 import {
   addResume,
+  clearOnboardingDraft,
   getProfile,
+  loadOnboardingDraft,
+  saveOnboardingDraft,
   updateProfile,
 } from "../storage/profileStorage";
 import { extractTextFromPdf } from "../resume/extractText";
@@ -111,12 +114,13 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
   const [resumeFeedback, setResumeFeedback] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     void (async () => {
       const profile = await getProfile();
       const identity = profile?.identity;
-      if (!identity) return;
+      if (identity) {
       if (identity.legalName?.first) setFirstName(identity.legalName.first);
       if (identity.legalName?.last) setLastName(identity.legalName.last);
       if (identity.contact?.email) setEmail(identity.contact.email);
@@ -149,8 +153,104 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
       if (demo?.raceEthnicity && demo.raceEthnicity.length > 0) {
         setRaceEthnicity(demo.raceEthnicity);
       }
+      }
+      const draft = await loadOnboardingDraft();
+      if (draft) {
+        if (draft.firstName !== undefined) setFirstName(draft.firstName);
+        if (draft.lastName !== undefined) setLastName(draft.lastName);
+        if (draft.email !== undefined) setEmail(draft.email);
+        if (draft.phone !== undefined) setPhone(draft.phone);
+        if (draft.citizenship !== undefined) setCitizenship(draft.citizenship);
+        if (draft.workAuthUS !== undefined) {
+          setWorkAuthUS(draft.workAuthUS as YesNo);
+        }
+        if (draft.sponsorship !== undefined) {
+          setSponsorship(draft.sponsorship as YesNo);
+        }
+        if (draft.educations && draft.educations.length > 0) {
+          setEducations(draft.educations);
+        }
+        if (draft.experiences) setExperiences(draft.experiences);
+        if (draft.linkedin !== undefined) setLinkedin(draft.linkedin);
+        if (draft.github !== undefined) setGithub(draft.github);
+        if (draft.portfolio !== undefined) setPortfolio(draft.portfolio);
+        if (draft.street !== undefined) setStreet(draft.street);
+        if (draft.city !== undefined) setCity(draft.city);
+        if (draft.state !== undefined) setState(draft.state);
+        if (draft.zip !== undefined) setZip(draft.zip);
+        if (draft.country !== undefined) setCountry(draft.country);
+        if (draft.gender !== undefined) setGender(draft.gender);
+        if (draft.pronouns !== undefined) setPronouns(draft.pronouns);
+        if (draft.veteranStatus !== undefined) {
+          setVeteranStatus(draft.veteranStatus);
+        }
+        if (draft.disabilityStatus !== undefined) {
+          setDisabilityStatus(draft.disabilityStatus);
+        }
+        if (draft.raceEthnicity) setRaceEthnicity(draft.raceEthnicity);
+      }
+      setHydrated(true);
     })();
   }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    void saveOnboardingDraft({
+      firstName,
+      lastName,
+      email,
+      phone,
+      citizenship,
+      workAuthUS,
+      sponsorship,
+      educations,
+      experiences,
+      linkedin,
+      github,
+      portfolio,
+      street,
+      city,
+      state,
+      zip,
+      country,
+      gender,
+      pronouns,
+      veteranStatus,
+      disabilityStatus,
+      raceEthnicity,
+      updatedAt: Date.now(),
+    });
+  }, [
+    hydrated,
+    firstName,
+    lastName,
+    email,
+    phone,
+    citizenship,
+    workAuthUS,
+    sponsorship,
+    educations,
+    experiences,
+    linkedin,
+    github,
+    portfolio,
+    street,
+    city,
+    state,
+    zip,
+    country,
+    gender,
+    pronouns,
+    veteranStatus,
+    disabilityStatus,
+    raceEthnicity,
+  ]);
+
+  async function handleCancel() {
+    if (!onCancel) return;
+    await clearOnboardingDraft();
+    onCancel();
+  }
 
   function updateEducation(idx: number, patch: Partial<Education>) {
     setEducations((prev) =>
@@ -326,6 +426,7 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
           },
         },
       });
+      await clearOnboardingDraft();
       onComplete();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -778,7 +879,7 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
             <button
               className="onboarding__cancel"
               type="button"
-              onClick={onCancel}
+              onClick={() => void handleCancel()}
               disabled={saving}
             >
               Cancel
