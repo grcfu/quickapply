@@ -16,6 +16,32 @@ import type {
   SelectFieldDef,
 } from "./types";
 
+type Restorer = () => void;
+
+let pendingSnapshot: Restorer[] | null = null;
+let lastSnapshot: Restorer[] | null = null;
+
+function pushRestorer(fn: Restorer): void {
+  if (pendingSnapshot) pendingSnapshot.push(fn);
+}
+
+export function undoLastFill(): { undone: number } {
+  if (!lastSnapshot || lastSnapshot.length === 0) {
+    return { undone: 0 };
+  }
+  let undone = 0;
+  for (const restore of [...lastSnapshot].reverse()) {
+    try {
+      restore();
+      undone++;
+    } catch {
+      /* silently skip restorers that throw — page may have changed */
+    }
+  }
+  lastSnapshot = null;
+  return { undone };
+}
+
 function findInput(def: InputFieldDef): HTMLInputElement | null {
   for (const sel of def.selectors) {
     const el = document.querySelector<HTMLInputElement>(sel);
@@ -225,7 +251,9 @@ async function fillField(
   if (def.kind === "input") {
     const el = findInput(def);
     if (!el) return { ok: false, reason: `${key} (field not found)` };
+    const prev = el.value;
     setReactValue(el, value);
+    pushRestorer(() => setReactValue(el, prev));
     return { ok: true };
   }
   const select = findSelectByLabel(def);
@@ -237,7 +265,9 @@ async function fillField(
         reason: `${key} (no option matched "${value}")`,
       };
     }
+    const prev = select.value;
     setSelectValue(select, option.value);
+    pushRestorer(() => setSelectValue(select, prev));
     return { ok: true };
   }
   const button = findDropdownButtonByLabel(def);
@@ -290,7 +320,16 @@ function fillFileField(
   if (!input) return { ok: false, reason: `${key} (file input not found)` };
   try {
     const file = base64ToFile(source.contentBase64, source.filename, source.mimeType);
+    const prevFiles = input.files;
     setFileValue(input, file);
+    pushRestorer(() => {
+      const dt = new DataTransfer();
+      if (prevFiles) {
+        for (const f of Array.from(prevFiles)) dt.items.add(f);
+      }
+      input.files = dt.files;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
     return { ok: true };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -390,7 +429,9 @@ function fillMultiCheckboxField(
       missed.push(v);
       continue;
     }
+    const prev = cb.checked;
     setCheckboxChecked(cb, true);
+    pushRestorer(() => setCheckboxChecked(cb, prev));
     matched++;
   }
   if (matched === 0) {
@@ -425,6 +466,7 @@ export async function runAutofill(): Promise<AutofillResponse> {
   }
   const fields: string[] = [];
   const skipped: string[] = [];
+  pendingSnapshot = [];
   for (const [key, def] of Object.entries(fieldMap)) {
     let result: { ok: true } | { ok: false; reason: string };
     if (def.kind === "multi-checkbox") {
@@ -459,8 +501,12 @@ export async function runAutofill(): Promise<AutofillResponse> {
     const input = findInputByQuestion(answer.question);
     if (!input) continue;
     if (input.value.trim() !== "") continue;
+    const prev = input.value;
     setReactValue(input, answer.answer);
+    pushRestorer(() => setReactValue(input, prev));
     fields.push(`answer: "${truncate(answer.question, 40)}"`);
   }
+  lastSnapshot = pendingSnapshot;
+  pendingSnapshot = null;
   return { ok: true, filled: fields.length, fields, skipped };
 }

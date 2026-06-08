@@ -10,4 +10,13 @@ export type AutofillResponse = {
   error?: string;
 };
 
-export type ExtensionMessage = AutofillRequest;
+export type UndoRequest = {
+  type: "undo";
+};
+
+export type UndoResponse = {
+  ok: boolean;
+  undone: number;
+};
+
+export type ExtensionMessage = AutofillRequest | UndoRequest;
