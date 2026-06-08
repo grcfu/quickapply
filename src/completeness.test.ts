@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeCompleteness } from "./profileCompleteness";
+import { computeCompleteness } from "./completeness";
 import type { Profile } from "./types/profile";
 
 function p(overrides: Partial<Profile> = {}): Profile {

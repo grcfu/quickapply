@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import {
   computeCompleteness,
   type CompletenessResult,
-} from "./profileCompleteness";
+} from "./completeness";
 import { getProfile } from "./storage/profileStorage";
 
 export function ProfileCompleteness() {
@@ -16,6 +16,7 @@ export function ProfileCompleteness() {
   }, []);
 
   if (!result) return null;
+  if (result.percent === 100) return null;
 
   const missing = result.buckets.filter((b) => !b.filled);
 

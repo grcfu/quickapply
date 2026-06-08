@@ -3,6 +3,7 @@ import { AnswerManager } from "./AnswerManager";
 import { AutofillButton } from "./AutofillButton";
 import { DebugPanel } from "./debug/DebugPanel";
 import { OnboardingForm } from "./onboarding/OnboardingForm";
+import { ProfileCompleteness } from "./ProfileCompleteness";
 import { ResumeManager } from "./ResumeManager";
 import { getProfile } from "./storage/profileStorage";
 import "./App.css";
@@ -54,6 +55,7 @@ function App() {
       )}
       {view.kind === "main" && (
         <>
+          <ProfileCompleteness />
           <AutofillButton />
           <ResumeManager />
           <AnswerManager />
