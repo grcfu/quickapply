@@ -5,6 +5,7 @@ import { DebugPanel } from "./debug/DebugPanel";
 import { OnboardingForm } from "./onboarding/OnboardingForm";
 import { ProfileCompleteness } from "./ProfileCompleteness";
 import { ResumeManager } from "./ResumeManager";
+import { SettingsPanel } from "./SettingsPanel";
 import { getProfile } from "./storage/profileStorage";
 import "./App.css";
 
@@ -59,6 +60,7 @@ function App() {
           <AutofillButton />
           <ResumeManager />
           <AnswerManager />
+          <SettingsPanel />
           <DebugPanel />
         </>
       )}
