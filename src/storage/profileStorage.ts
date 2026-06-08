@@ -1,13 +1,42 @@
 import type {
   AnswerEntry,
   DeepPartial,
+  Education,
+  Experience,
   Profile,
   ResumeProfile,
 } from "../types/profile";
 
 const STORAGE_KEY = "quickapply";
+const DRAFT_KEY = "quickapply_onboarding_draft";
 const CURRENT_SCHEMA_VERSION = 1;
 const MAX_TOTAL_BYTES = 8 * 1024 * 1024;
+
+export type OnboardingDraft = {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  citizenship?: string;
+  workAuthUS?: string;
+  sponsorship?: string;
+  educations?: Education[];
+  experiences?: Experience[];
+  linkedin?: string;
+  github?: string;
+  portfolio?: string;
+  street?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  country?: string;
+  gender?: string;
+  pronouns?: string;
+  veteranStatus?: string;
+  disabilityStatus?: string;
+  raceEthnicity?: string[];
+  updatedAt: number;
+};
 
 type StorageEnvelope = {
   schemaVersion: number;
@@ -139,6 +168,21 @@ export async function removeAnswer(answerId: string): Promise<void> {
   if (!existing) return;
   const answers = (existing.answers ?? []).filter((a) => a.id !== answerId);
   await saveProfile({ ...existing, answers });
+}
+
+export async function saveOnboardingDraft(
+  draft: OnboardingDraft,
+): Promise<void> {
+  await chrome.storage.local.set({ [DRAFT_KEY]: draft });
+}
+
+export async function loadOnboardingDraft(): Promise<OnboardingDraft | null> {
+  const result = await chrome.storage.local.get(DRAFT_KEY);
+  return (result[DRAFT_KEY] as OnboardingDraft | undefined) ?? null;
+}
+
+export async function clearOnboardingDraft(): Promise<void> {
+  await chrome.storage.local.remove(DRAFT_KEY);
 }
 
 export async function exportProfile(): Promise<string> {
