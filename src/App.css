@@ -517,6 +517,39 @@
   cursor: progress;
 }
 
+.autofill__undo {
+  appearance: none;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background var(--t-fast),
+    border-color var(--t-fast),
+    color var(--t-fast);
+}
+
+.autofill__undo:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.autofill__undo:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.autofill__undo:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .autofill__feedback {
   margin: 0;
   padding: 9px 12px;

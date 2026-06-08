@@ -1,5 +1,10 @@
 import { useState } from "react";
-import type { AutofillRequest, AutofillResponse } from "./messages";
+import type {
+  AutofillRequest,
+  AutofillResponse,
+  UndoRequest,
+  UndoResponse,
+} from "./messages";
 
 type Status =
   | { kind: "idle" }
@@ -26,10 +31,12 @@ function isSupportedUrl(url: string | undefined): boolean {
 export function AutofillButton() {
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [busy, setBusy] = useState(false);
+  const [canUndo, setCanUndo] = useState(false);
 
   async function onClick() {
     setBusy(true);
     setStatus({ kind: "idle" });
+    setCanUndo(false);
     try {
       const [tab] = await chrome.tabs.query({
         active: true,
@@ -75,6 +82,40 @@ export function AutofillButton() {
           ? ` · skipped: ${resp.skipped.join("; ")}`
           : "";
       setStatus({ kind: "ok", message: filledLine + skippedLine });
+      if (resp.filled > 0) setCanUndo(true);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onUndo() {
+    setBusy(true);
+    try {
+      const [tab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
+      if (!tab?.id) return;
+      const req: UndoRequest = { type: "undo" };
+      let resp: UndoResponse;
+      try {
+        resp = (await chrome.tabs.sendMessage(tab.id, req)) as UndoResponse;
+      } catch {
+        setStatus({
+          kind: "error",
+          message: "Couldn't reach the page to undo.",
+        });
+        return;
+      }
+      if (resp?.undone > 0) {
+        setStatus({
+          kind: "ok",
+          message: `Undone ${resp.undone} field${resp.undone > 1 ? "s" : ""}.`,
+        });
+      } else {
+        setStatus({ kind: "ok", message: "Nothing to undo." });
+      }
+      setCanUndo(false);
     } finally {
       setBusy(false);
     }
@@ -89,6 +130,16 @@ export function AutofillButton() {
       >
         {busy ? "Filling…" : "Autofill this page"}
       </button>
+      {canUndo && (
+        <button
+          type="button"
+          className="autofill__undo"
+          onClick={onUndo}
+          disabled={busy}
+        >
+          Undo last fill
+        </button>
+      )}
       {status.kind !== "idle" && (
         <p
           className={`autofill__feedback autofill__feedback--${
