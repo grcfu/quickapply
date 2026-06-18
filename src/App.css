@@ -69,6 +69,97 @@
   margin: 16px 0;
 }
 
+.welcome {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 0 8px;
+}
+
+.welcome__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.welcome__title::first-letter {
+  color: var(--accent);
+}
+
+.welcome__subtitle {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.welcome__features {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.welcome__feature {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.welcome__bullet {
+  flex-shrink: 0;
+  margin-top: 5px;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.welcome__cta {
+  appearance: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  padding: 13px 16px;
+  margin-top: 8px;
+  border: none;
+  border-radius: var(--radius-lg);
+  background: var(--accent);
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition:
+    background var(--t-fast),
+    box-shadow var(--t-fast),
+    transform var(--t-fast);
+}
+
+.welcome__cta:hover {
+  background: var(--accent-hover);
+  box-shadow: var(--shadow-md);
+}
+
+.welcome__cta:active {
+  background: var(--accent-active);
+  transform: translateY(1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.welcome__cta:focus-visible {
+  outline: none;
+  box-shadow:
+    var(--ring),
+    var(--shadow-md);
+}
+
 .panel {
   margin: 0 0 10px;
   border: 1px solid var(--border);
@@ -1170,6 +1261,27 @@
   font-size: 11px;
   font-weight: 500;
   color: var(--text-muted);
+}
+
+.onboarding__required {
+  color: var(--danger);
+  margin-left: 3px;
+  font-weight: 600;
+}
+
+.onboarding__field-error {
+  font-size: 10px;
+  color: var(--danger);
+  margin-top: 2px;
+}
+
+.onboarding__input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.onboarding__input[aria-invalid="true"]:focus-visible {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px rgb(185 28 28 / 0.18);
 }
 
 .onboarding__input {

@@ -7,11 +7,13 @@ import { ProfileCompleteness } from "./ProfileCompleteness";
 import { ResumeManager } from "./ResumeManager";
 import { SettingsPanel } from "./SettingsPanel";
 import { SiteStatus } from "./SiteStatus";
+import { WelcomeScreen } from "./WelcomeScreen";
 import { getProfile } from "./storage/profileStorage";
 import "./App.css";
 
 type View =
   | { kind: "loading" }
+  | { kind: "welcome" }
   | { kind: "onboarding"; canCancel: boolean }
   | { kind: "main" };
 
@@ -22,9 +24,7 @@ function App() {
     void (async () => {
       const profile = await getProfile();
       setView(
-        profile?.identity
-          ? { kind: "main" }
-          : { kind: "onboarding", canCancel: false },
+        profile?.identity ? { kind: "main" } : { kind: "welcome" },
       );
     })();
   }, []);
@@ -47,6 +47,13 @@ function App() {
           <span className="app__tag">v0.0.1</span>
         </div>
       </header>
+      {view.kind === "welcome" && (
+        <WelcomeScreen
+          onGetStarted={() =>
+            setView({ kind: "onboarding", canCancel: false })
+          }
+        />
+      )}
       {view.kind === "onboarding" && (
         <OnboardingForm
           onComplete={() => setView({ kind: "main" })}

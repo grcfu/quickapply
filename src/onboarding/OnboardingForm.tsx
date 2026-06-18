@@ -63,6 +63,15 @@ function hasAnyValue(obj: Record<string, unknown>): boolean {
   return Object.values(obj).some((v) => v !== undefined && v !== "");
 }
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function validateEmail(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (!EMAIL_RE.test(trimmed)) return "Please enter a valid email address.";
+  return null;
+}
+
 function Section({
   title,
   open = true,
@@ -114,6 +123,7 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
   const [resumeFeedback, setResumeFeedback] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -383,6 +393,12 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
       setError("First name, last name, and email are required.");
       return;
     }
+    const emailIssue = validateEmail(email);
+    if (emailIssue) {
+      setEmailError(emailIssue);
+      setError(emailIssue);
+      return;
+    }
     setSaving(true);
     try {
       const trimmedEducations = educations.map(trimEducation).filter(hasAnyValue);
@@ -469,7 +485,12 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
       <Section title="Personal">
         <div className="onboarding__row">
           <label className="onboarding__field">
-            <span className="onboarding__label">First name</span>
+            <span className="onboarding__label">
+              First name
+              <span className="onboarding__required" aria-hidden="true">
+                *
+              </span>
+            </span>
             <input
               className="onboarding__input"
               value={firstName}
@@ -479,7 +500,12 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
             />
           </label>
           <label className="onboarding__field">
-            <span className="onboarding__label">Last name</span>
+            <span className="onboarding__label">
+              Last name
+              <span className="onboarding__required" aria-hidden="true">
+                *
+              </span>
+            </span>
             <input
               className="onboarding__input"
               value={lastName}
@@ -491,15 +517,34 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
         </div>
 
         <label className="onboarding__field">
-          <span className="onboarding__label">Email</span>
+          <span className="onboarding__label">
+            Email
+            <span className="onboarding__required" aria-hidden="true">
+              *
+            </span>
+          </span>
           <input
             className="onboarding__input"
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (emailError) setEmailError(null);
+            }}
+            onBlur={() => setEmailError(validateEmail(email))}
             autoComplete="email"
             required
+            aria-invalid={emailError !== null}
+            aria-describedby={emailError ? "onboarding-email-error" : undefined}
           />
+          {emailError && (
+            <span
+              id="onboarding-email-error"
+              className="onboarding__field-error"
+            >
+              {emailError}
+            </span>
+          )}
         </label>
 
         <label className="onboarding__field">
