@@ -4,6 +4,7 @@ import { AutofillButton } from "./AutofillButton";
 import { DebugPanel } from "./debug/DebugPanel";
 import { OnboardingForm } from "./onboarding/OnboardingForm";
 import { ProfileCompleteness } from "./ProfileCompleteness";
+import { ResumeFirstStep } from "./ResumeFirstStep";
 import { ResumeManager } from "./ResumeManager";
 import { SettingsPanel } from "./SettingsPanel";
 import { SiteStatus } from "./SiteStatus";
@@ -14,6 +15,7 @@ import "./App.css";
 type View =
   | { kind: "loading" }
   | { kind: "welcome" }
+  | { kind: "resume-first" }
   | { kind: "onboarding"; canCancel: boolean }
   | { kind: "main" };
 
@@ -49,9 +51,13 @@ function App() {
       </header>
       {view.kind === "welcome" && (
         <WelcomeScreen
-          onGetStarted={() =>
-            setView({ kind: "onboarding", canCancel: false })
-          }
+          onGetStarted={() => setView({ kind: "resume-first" })}
+        />
+      )}
+      {view.kind === "resume-first" && (
+        <ResumeFirstStep
+          onContinue={() => setView({ kind: "onboarding", canCancel: false })}
+          onSkip={() => setView({ kind: "onboarding", canCancel: false })}
         />
       )}
       {view.kind === "onboarding" && (
