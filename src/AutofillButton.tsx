@@ -8,7 +8,8 @@ import type {
 
 type Status =
   | { kind: "idle" }
-  | { kind: "ok"; message: string }
+  | { kind: "ok"; filled: string[]; skipped: string[] }
+  | { kind: "info"; message: string }
   | { kind: "error"; message: string };
 
 const ATS_HOSTS = [
@@ -73,15 +74,11 @@ export function AutofillButton() {
         });
         return;
       }
-      const filledLine =
-        resp.filled > 0
-          ? `Filled ${resp.filled}: ${resp.fields.join(", ")}`
-          : "Filled 0 fields.";
-      const skippedLine =
-        resp.skipped.length > 0
-          ? ` · skipped: ${resp.skipped.join("; ")}`
-          : "";
-      setStatus({ kind: "ok", message: filledLine + skippedLine });
+      setStatus({
+        kind: "ok",
+        filled: resp.fields,
+        skipped: resp.skipped,
+      });
       if (resp.filled > 0) setCanUndo(true);
     } finally {
       setBusy(false);
@@ -109,11 +106,13 @@ export function AutofillButton() {
       }
       if (resp?.undone > 0) {
         setStatus({
-          kind: "ok",
-          message: `Undone ${resp.undone} field${resp.undone > 1 ? "s" : ""}.`,
+          kind: "info",
+          message: `Undone ${resp.undone} field${
+            resp.undone > 1 ? "s" : ""
+          }.`,
         });
       } else {
-        setStatus({ kind: "ok", message: "Nothing to undo." });
+        setStatus({ kind: "info", message: "Nothing to undo." });
       }
       setCanUndo(false);
     } finally {
@@ -140,14 +139,68 @@ export function AutofillButton() {
           Undo last fill
         </button>
       )}
-      {status.kind !== "idle" && (
-        <p
-          className={`autofill__feedback autofill__feedback--${
-            status.kind === "ok" ? "ok" : "err"
-          }`}
-        >
+      {status.kind === "info" && (
+        <p className="autofill__feedback autofill__feedback--ok">
           {status.message}
         </p>
+      )}
+      {status.kind === "error" && (
+        <p className="autofill__feedback autofill__feedback--err">
+          {status.message}
+        </p>
+      )}
+      {status.kind === "ok" && (
+        <div className="autofill__result">
+          <div className="autofill__result-head">
+            {status.filled.length > 0 ? (
+              <span className="autofill__result-count">
+                Filled{" "}
+                <strong>{status.filled.length}</strong>{" "}
+                field{status.filled.length === 1 ? "" : "s"}
+              </span>
+            ) : (
+              <span className="autofill__result-count autofill__result-count--zero">
+                No fields filled
+              </span>
+            )}
+            {status.skipped.length > 0 && (
+              <span className="autofill__result-skipped">
+                · {status.skipped.length} skipped
+              </span>
+            )}
+          </div>
+          {status.filled.length > 0 && (
+            <ul className="autofill__list">
+              {status.filled.map((f) => (
+                <li
+                  key={f}
+                  className="autofill__list-item autofill__list-item--ok"
+                >
+                  <span className="autofill__list-dot" aria-hidden="true" />
+                  <span className="autofill__list-text">{f}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {status.skipped.length > 0 && (
+            <details className="autofill__skipped">
+              <summary className="autofill__skipped-summary">
+                Show skipped ({status.skipped.length})
+              </summary>
+              <ul className="autofill__list">
+                {status.skipped.map((s, i) => (
+                  <li
+                    key={i}
+                    className="autofill__list-item autofill__list-item--off"
+                  >
+                    <span className="autofill__list-dot" aria-hidden="true" />
+                    <span className="autofill__list-text">{s}</span>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+        </div>
       )}
     </section>
   );
