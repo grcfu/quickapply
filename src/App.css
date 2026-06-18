@@ -1006,6 +1006,121 @@
   color: var(--text);
 }
 
+.autofill__capture {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--accent);
+  background: var(--accent-soft);
+  border-radius: var(--radius-md);
+}
+
+.autofill__capture-head {
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--accent-text);
+}
+
+.autofill__capture-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.autofill__capture-q {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.autofill__capture-input {
+  appearance: none;
+  font: inherit;
+  font-family: inherit;
+  font-size: 12px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+  resize: vertical;
+  min-height: 56px;
+  transition:
+    border-color var(--t-fast),
+    box-shadow var(--t-fast);
+}
+
+.autofill__capture-input:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--ring);
+}
+
+.autofill__capture-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.autofill__capture-skip,
+.autofill__capture-save {
+  appearance: none;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    background var(--t-fast),
+    border-color var(--t-fast),
+    color var(--t-fast);
+}
+
+.autofill__capture-skip {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.autofill__capture-skip:hover {
+  background: var(--bg-muted);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.autofill__capture-skip:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.autofill__capture-save {
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: #ffffff;
+}
+
+.autofill__capture-save:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.autofill__capture-save:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.autofill__capture-save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .debug {
   display: flex;
   flex-direction: column;

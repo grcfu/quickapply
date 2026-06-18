@@ -7,6 +7,7 @@ export type AutofillResponse = {
   filled: number;
   fields: string[];
   skipped: string[];
+  unmatchedQuestions?: string[];
   error?: string;
 };
 

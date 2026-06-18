@@ -505,6 +505,7 @@ export async function runAutofill(): Promise<AutofillResponse> {
       skipped.push(result.reason);
     }
   }
+  const filledByAnswer = new Set<HTMLTextAreaElement | HTMLInputElement>();
   for (const answer of profile.answers ?? []) {
     const input = findInputByQuestion(answer.question);
     if (!input) continue;
@@ -513,9 +514,63 @@ export async function runAutofill(): Promise<AutofillResponse> {
     setReactValue(input, answer.answer);
     pushRestorer(() => setReactValue(input, prev));
     flashFilled(input);
+    filledByAnswer.add(input);
     fields.push(`answer: "${truncate(answer.question, 40)}"`);
   }
+  const unmatchedQuestions = scanUnmatchedQuestions(
+    profile.answers ?? [],
+    filledByAnswer,
+  );
   lastSnapshot = pendingSnapshot;
   pendingSnapshot = null;
-  return { ok: true, filled: fields.length, fields, skipped };
+  return {
+    ok: true,
+    filled: fields.length,
+    fields,
+    skipped,
+    unmatchedQuestions,
+  };
+}
+
+function getTextareaLabel(ta: HTMLTextAreaElement): string | null {
+  if (ta.id) {
+    const lbl = document.querySelector(`label[for="${CSS.escape(ta.id)}"]`);
+    if (lbl) return (lbl.textContent ?? "").trim();
+  }
+  const closest = ta.closest("label");
+  if (closest) return (closest.textContent ?? "").trim();
+  const prev = ta.previousElementSibling;
+  if (prev?.tagName === "LABEL") return (prev.textContent ?? "").trim();
+  return null;
+}
+
+function scanUnmatchedQuestions(
+  existingAnswers: { question: string }[],
+  filledByAnswer: Set<HTMLTextAreaElement | HTMLInputElement>,
+): string[] {
+  const seen = new Set<string>();
+  const existingQs = existingAnswers.map((a) =>
+    a.question.trim().toLowerCase(),
+  );
+  for (const ta of Array.from(document.querySelectorAll("textarea"))) {
+    if (!(ta instanceof HTMLTextAreaElement)) continue;
+    if (filledByAnswer.has(ta)) continue;
+    if (ta.value.trim() !== "") continue;
+    const label = getTextareaLabel(ta);
+    if (!label || label.length < 10 || label.length > 300) continue;
+    const lower = label.toLowerCase();
+    if (existingQs.some((q) => q === lower || lower.includes(q))) continue;
+    if (seen.has(lower)) continue;
+    seen.add(lower);
+    if (seen.size >= 5) break;
+  }
+  return [...seen].map((lower) => {
+    /* preserve original casing by re-scanning */
+    for (const ta of Array.from(document.querySelectorAll("textarea"))) {
+      if (!(ta instanceof HTMLTextAreaElement)) continue;
+      const label = getTextareaLabel(ta);
+      if (label && label.toLowerCase() === lower) return label;
+    }
+    return lower;
+  });
 }

@@ -1,10 +1,13 @@
 import { useState } from "react";
+import { addAnswer } from "./storage/profileStorage";
 import type {
   AutofillRequest,
   AutofillResponse,
   UndoRequest,
   UndoResponse,
 } from "./messages";
+
+type Pending = { question: string; answer: string };
 
 type Status =
   | { kind: "idle" }
@@ -33,11 +36,15 @@ export function AutofillButton() {
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [busy, setBusy] = useState(false);
   const [canUndo, setCanUndo] = useState(false);
+  const [pending, setPending] = useState<Pending[]>([]);
+  const [captureError, setCaptureError] = useState<string | null>(null);
 
   async function onClick() {
     setBusy(true);
     setStatus({ kind: "idle" });
     setCanUndo(false);
+    setPending([]);
+    setCaptureError(null);
     try {
       const [tab] = await chrome.tabs.query({
         active: true,
@@ -80,8 +87,41 @@ export function AutofillButton() {
         skipped: resp.skipped,
       });
       if (resp.filled > 0) setCanUndo(true);
+      if (resp.unmatchedQuestions && resp.unmatchedQuestions.length > 0) {
+        setPending(
+          resp.unmatchedQuestions.map((q) => ({ question: q, answer: "" })),
+        );
+      }
     } finally {
       setBusy(false);
+    }
+  }
+
+  function updatePendingAnswer(idx: number, value: string) {
+    setPending((prev) =>
+      prev.map((p, i) => (i === idx ? { ...p, answer: value } : p)),
+    );
+  }
+
+  function skipPending(idx: number) {
+    setPending((prev) => prev.filter((_, i) => i !== idx));
+    setCaptureError(null);
+  }
+
+  async function savePending(idx: number) {
+    const item = pending[idx];
+    if (!item || !item.answer.trim()) return;
+    setCaptureError(null);
+    try {
+      await addAnswer({
+        id: crypto.randomUUID(),
+        question: item.question,
+        answer: item.answer.trim(),
+        createdAt: Date.now(),
+      });
+      skipPending(idx);
+    } catch (err) {
+      setCaptureError(err instanceof Error ? err.message : String(err));
     }
   }
 
@@ -199,6 +239,48 @@ export function AutofillButton() {
                 ))}
               </ul>
             </details>
+          )}
+        </div>
+      )}
+      {pending.length > 0 && (
+        <div className="autofill__capture">
+          <div className="autofill__capture-head">
+            <strong>{pending.length} new question{pending.length === 1 ? "" : "s"}</strong>{" "}
+            on this page — save your answers to reuse them.
+          </div>
+          {pending.map((p, i) => (
+            <div key={i} className="autofill__capture-card">
+              <div className="autofill__capture-q">{p.question}</div>
+              <textarea
+                className="autofill__capture-input"
+                rows={3}
+                value={p.answer}
+                onChange={(e) => updatePendingAnswer(i, e.target.value)}
+                placeholder="Your answer…"
+              />
+              <div className="autofill__capture-actions">
+                <button
+                  type="button"
+                  className="autofill__capture-skip"
+                  onClick={() => skipPending(i)}
+                >
+                  Skip
+                </button>
+                <button
+                  type="button"
+                  className="autofill__capture-save"
+                  onClick={() => void savePending(i)}
+                  disabled={!p.answer.trim()}
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          ))}
+          {captureError && (
+            <p className="autofill__feedback autofill__feedback--err">
+              {captureError}
+            </p>
           )}
         </div>
       )}
