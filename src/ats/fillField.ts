@@ -70,6 +70,45 @@ export function setFileValue(input: HTMLInputElement, file: File): void {
   input.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
+const FLASH_CLASS = "quickapply-just-filled";
+const FLASH_STYLE_ID = "quickapply-flash-styles";
+const FLASH_DURATION_MS = 1500;
+
+function ensureFlashStyles(): void {
+  if (document.getElementById(FLASH_STYLE_ID)) return;
+  const style = document.createElement("style");
+  style.id = FLASH_STYLE_ID;
+  style.textContent = `
+    .${FLASH_CLASS} {
+      animation: quickapply-flash ${FLASH_DURATION_MS}ms ease-out;
+    }
+    @keyframes quickapply-flash {
+      0% {
+        box-shadow:
+          0 0 0 2px rgb(253 224 71),
+          0 0 0 6px rgb(253 224 71 / 0.45);
+      }
+      100% {
+        box-shadow:
+          0 0 0 0 transparent,
+          0 0 0 0 transparent;
+      }
+    }
+  `;
+  document.documentElement.appendChild(style);
+}
+
+export function flashFilled(el: Element | null | undefined): void {
+  if (!(el instanceof HTMLElement)) return;
+  ensureFlashStyles();
+  el.classList.remove(FLASH_CLASS);
+  void el.offsetWidth;
+  el.classList.add(FLASH_CLASS);
+  window.setTimeout(() => {
+    el.classList.remove(FLASH_CLASS);
+  }, FLASH_DURATION_MS + 50);
+}
+
 const TOKEN_RE = /[^a-z0-9]+/;
 
 function tokens(s: string): string[] {

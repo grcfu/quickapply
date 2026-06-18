@@ -3,6 +3,7 @@ import type { AutofillResponse } from "../messages";
 import {
   base64ToFile,
   findMatchingOption,
+  flashFilled,
   setCheckboxChecked,
   setFileValue,
   setReactValue,
@@ -254,6 +255,7 @@ async function fillField(
     const prev = el.value;
     setReactValue(el, value);
     pushRestorer(() => setReactValue(el, prev));
+    flashFilled(el);
     return { ok: true };
   }
   const select = findSelectByLabel(def);
@@ -268,12 +270,16 @@ async function fillField(
     const prev = select.value;
     setSelectValue(select, option.value);
     pushRestorer(() => setSelectValue(select, prev));
+    flashFilled(select);
     return { ok: true };
   }
   const button = findDropdownButtonByLabel(def);
   if (button) {
     const ok = await clickDropdownAndPickOption(button, value);
-    if (ok) return { ok: true };
+    if (ok) {
+      flashFilled(button);
+      return { ok: true };
+    }
     return {
       ok: false,
       reason: `${key} (workday dropdown: no option matched "${value}")`,
@@ -330,6 +336,7 @@ function fillFileField(
       input.files = dt.files;
       input.dispatchEvent(new Event("change", { bubbles: true }));
     });
+    flashFilled(input);
     return { ok: true };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -432,6 +439,7 @@ function fillMultiCheckboxField(
     const prev = cb.checked;
     setCheckboxChecked(cb, true);
     pushRestorer(() => setCheckboxChecked(cb, prev));
+    flashFilled(cb);
     matched++;
   }
   if (matched === 0) {
@@ -504,6 +512,7 @@ export async function runAutofill(): Promise<AutofillResponse> {
     const prev = input.value;
     setReactValue(input, answer.answer);
     pushRestorer(() => setReactValue(input, prev));
+    flashFilled(input);
     fields.push(`answer: "${truncate(answer.question, 40)}"`);
   }
   lastSnapshot = pendingSnapshot;
