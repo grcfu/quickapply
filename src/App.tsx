@@ -6,6 +6,7 @@ import { OnboardingForm } from "./onboarding/OnboardingForm";
 import { ProfileCompleteness } from "./ProfileCompleteness";
 import { ResumeManager } from "./ResumeManager";
 import { SettingsPanel } from "./SettingsPanel";
+import { SiteStatus } from "./SiteStatus";
 import { getProfile } from "./storage/profileStorage";
 import "./App.css";
 
@@ -57,6 +58,7 @@ function App() {
       {view.kind === "main" && (
         <>
           <ProfileCompleteness />
+          <SiteStatus />
           <AutofillButton />
           <ResumeManager />
           <AnswerManager />
