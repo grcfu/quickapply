@@ -6,12 +6,43 @@ import {
 } from "./storage/profileStorage";
 import type { AnswerEntry } from "./types/profile";
 
+const COPIED_FEEDBACK_MS = 1500;
+
+/**
+ * `navigator.clipboard` needs a secure context and, in some Chrome versions,
+ * document focus — both of which an extension popup can lose mid-click. The
+ * hidden-textarea + execCommand path is the fallback that still works there.
+ */
+async function copyText(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return;
+  } catch {
+    /* fall through to the legacy path below */
+  }
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.setAttribute("readonly", "");
+  ta.style.position = "fixed";
+  ta.style.top = "-1000px";
+  ta.style.opacity = "0";
+  document.body.appendChild(ta);
+  try {
+    ta.select();
+    const ok = document.execCommand("copy");
+    if (!ok) throw new Error("Clipboard copy was blocked by the browser.");
+  } finally {
+    ta.remove();
+  }
+}
+
 export function AnswerManager() {
   const [answers, setAnswers] = useState<AnswerEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [newQuestion, setNewQuestion] = useState("");
   const [newAnswer, setNewAnswer] = useState("");
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -58,6 +89,20 @@ export function AnswerManager() {
     }
   }
 
+  async function onCopy(entry: AnswerEntry) {
+    try {
+      await copyText(entry.answer);
+      setError(null);
+      setCopiedId(entry.id);
+      window.setTimeout(
+        () => setCopiedId((cur) => (cur === entry.id ? null : cur)),
+        COPIED_FEEDBACK_MS,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
   async function onRemove(id: string) {
     try {
       await removeAnswer(id);
@@ -89,13 +134,23 @@ export function AnswerManager() {
             <li key={a.id} className="answers__item">
               <div className="answers__q">{a.question}</div>
               <div className="answers__a">{a.answer}</div>
-              <button
-                type="button"
-                className="answers__remove"
-                onClick={() => onRemove(a.id)}
-              >
-                Remove
-              </button>
+              <div className="answers__item-actions">
+                <button
+                  type="button"
+                  className="answers__copy"
+                  onClick={() => void onCopy(a)}
+                  aria-label={`Copy answer for "${a.question}"`}
+                >
+                  {copiedId === a.id ? "Copied" : "Copy"}
+                </button>
+                <button
+                  type="button"
+                  className="answers__remove"
+                  onClick={() => onRemove(a.id)}
+                >
+                  Remove
+                </button>
+              </div>
             </li>
           ))}
         </ul>
