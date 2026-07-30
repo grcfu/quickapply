@@ -22,6 +22,8 @@ export type OnboardingDraft = {
   sponsorship?: string;
   educations?: Education[];
   experiences?: Experience[];
+  /** Raw comma-separated text, so partial typing survives a draft save. */
+  skills?: string;
   linkedin?: string;
   github?: string;
   portfolio?: string;

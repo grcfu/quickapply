@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Real profile data for Developer tools -> Import profile. Never commit:
+# this holds a home address, phone number, and demographic answers.
+my-profile.json
+quickapply-profile-*.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { addAnswer } from "./storage/profileStorage";
+import { isSupportedHost } from "./ats/fieldMapRegistry";
 import type {
   AutofillRequest,
   AutofillResponse,
@@ -11,22 +12,24 @@ type Pending = { question: string; answer: string };
 
 type Status =
   | { kind: "idle" }
-  | { kind: "ok"; filled: string[]; skipped: string[] }
+  | {
+      kind: "ok";
+      filled: string[];
+      skipped: string[];
+      offPage: string[];
+      currentStep?: string;
+    }
   | { kind: "info"; message: string }
   | { kind: "error"; message: string };
 
-const ATS_HOSTS = [
-  "greenhouse.io",
-  "lever.co",
-  "ashbyhq.com",
-  "myworkdayjobs.com",
-];
-
+/*
+ * Derived from the adapter registry rather than a hand-kept list, so the button
+ * can never claim a host is supported when no field map backs it.
+ */
 function isSupportedUrl(url: string | undefined): boolean {
   if (!url) return false;
   try {
-    const host = new URL(url).hostname;
-    return ATS_HOSTS.some((h) => host === h || host.endsWith(`.${h}`));
+    return isSupportedHost(new URL(url).hostname);
   } catch {
     return false;
   }
@@ -58,7 +61,7 @@ export function AutofillButton() {
         setStatus({
           kind: "error",
           message:
-            "Active tab isn't a supported ATS (Greenhouse / Lever / Ashby / Workday).",
+            "Active tab isn't a supported ATS (Greenhouse / Lever / Workday).",
         });
         return;
       }
@@ -85,6 +88,8 @@ export function AutofillButton() {
         kind: "ok",
         filled: resp.fields,
         skipped: resp.skipped,
+        offPage: resp.offPage ?? [],
+        currentStep: resp.currentStep,
       });
       if (resp.filled > 0) setCanUndo(true);
       if (resp.unmatchedQuestions && resp.unmatchedQuestions.length > 0) {
@@ -209,6 +214,18 @@ export function AutofillButton() {
               </span>
             )}
           </div>
+          {status.currentStep && (
+            <p className="autofill__step">
+              Step detected: <strong>{status.currentStep}</strong>
+              {status.offPage.length > 0 && (
+                <>
+                  {" "}
+                  · {status.offPage.length} field
+                  {status.offPage.length === 1 ? "" : "s"} belong to later steps
+                </>
+              )}
+            </p>
+          )}
           {status.filled.length > 0 && (
             <ul className="autofill__list">
               {status.filled.map((f) => (
@@ -238,6 +255,28 @@ export function AutofillButton() {
                   </li>
                 ))}
               </ul>
+            </details>
+          )}
+          {status.offPage.length > 0 && (
+            <details className="autofill__skipped">
+              <summary className="autofill__skipped-summary">
+                On other steps ({status.offPage.length})
+              </summary>
+              <ul className="autofill__list">
+                {status.offPage.map((s, i) => (
+                  <li
+                    key={i}
+                    className="autofill__list-item autofill__list-item--off"
+                  >
+                    <span className="autofill__list-dot" aria-hidden="true" />
+                    <span className="autofill__list-text">{s}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="autofill__hint">
+                Workday splits one application across several steps. Click
+                Autofill again on each step.
+              </p>
             </details>
           )}
         </div>

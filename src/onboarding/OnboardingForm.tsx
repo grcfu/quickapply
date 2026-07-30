@@ -63,6 +63,21 @@ function hasAnyValue(obj: Record<string, unknown>): boolean {
   return Object.values(obj).some((v) => v !== undefined && v !== "");
 }
 
+/** Splits on commas and newlines so a pasted resume skills line just works. */
+function splitSkills(raw: string): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const part of raw.split(/[,\n;]+/)) {
+    const skill = part.trim();
+    if (!skill) continue;
+    const key = skill.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(skill);
+  }
+  return out;
+}
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function validateEmail(value: string): string | null {
@@ -106,6 +121,8 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
   const [sponsorship, setSponsorship] = useState<YesNo>("");
   const [educations, setEducations] = useState<Education[]>([{}]);
   const [experiences, setExperiences] = useState<Experience[]>([]);
+  /* Held as raw comma-separated text so partial typing survives a draft save. */
+  const [skills, setSkills] = useState("");
   const [linkedin, setLinkedin] = useState("");
   const [github, setGithub] = useState("");
   const [portfolio, setPortfolio] = useState("");
@@ -164,6 +181,9 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
         setRaceEthnicity(demo.raceEthnicity);
       }
       }
+      if (profile?.skills && profile.skills.length > 0) {
+        setSkills(profile.skills.join(", "));
+      }
       const draft = await loadOnboardingDraft();
       if (draft) {
         if (draft.firstName !== undefined) setFirstName(draft.firstName);
@@ -198,6 +218,7 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
           setDisabilityStatus(draft.disabilityStatus);
         }
         if (draft.raceEthnicity) setRaceEthnicity(draft.raceEthnicity);
+        if (draft.skills !== undefined) setSkills(draft.skills);
       }
       setHydrated(true);
     })();
@@ -215,6 +236,7 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
       sponsorship,
       educations,
       experiences,
+      skills,
       linkedin,
       github,
       portfolio,
@@ -241,6 +263,7 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
     sponsorship,
     educations,
     experiences,
+    skills,
     linkedin,
     github,
     portfolio,
@@ -403,6 +426,7 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
     try {
       const trimmedEducations = educations.map(trimEducation).filter(hasAnyValue);
       const trimmedExperiences = experiences.map(trimExperience).filter(hasAnyValue);
+      const parsedSkills = splitSkills(skills);
       await updateProfile({
         identity: {
           legalName: {
@@ -441,6 +465,7 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
               raceEthnicity.length > 0 ? raceEthnicity : undefined,
           },
         },
+        skills: parsedSkills.length > 0 ? parsedSkills : undefined,
       });
       await clearOnboardingDraft();
       onComplete();
@@ -713,6 +738,23 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
         >
           + Add another education
         </button>
+      </Section>
+
+      <Section title="Skills" open={false}>
+        <label className="onboarding__field">
+          <span className="onboarding__label">Skills</span>
+          <textarea
+            className="onboarding__input"
+            rows={3}
+            value={skills}
+            onChange={(e) => setSkills(e.target.value)}
+            placeholder="Python, React, TypeScript, SQL"
+          />
+          <span className="onboarding__hint">
+            Comma-separated. Workday asks for skills one at a time, so QuickApply
+            adds each of these individually.
+          </span>
+        </label>
       </Section>
 
       <Section title="Experience" open={false}>

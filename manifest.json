@@ -11,7 +11,8 @@
     "https://*.greenhouse.io/*",
     "https://*.lever.co/*",
     "https://*.ashbyhq.com/*",
-    "https://*.myworkdayjobs.com/*"
+    "https://*.myworkdayjobs.com/*",
+    "https://*.myworkdaysite.com/*"
   ],
   "background": {
     "service_worker": "src/background.ts",
@@ -23,9 +24,11 @@
         "https://*.greenhouse.io/*",
         "https://*.lever.co/*",
         "https://*.ashbyhq.com/*",
-        "https://*.myworkdayjobs.com/*"
+        "https://*.myworkdayjobs.com/*",
+        "https://*.myworkdaysite.com/*"
       ],
-      "js": ["src/content.ts"]
+      "js": ["src/content.ts"],
+      "all_frames": true
     }
   ]
 }

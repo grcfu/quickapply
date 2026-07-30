@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { SUPPORTED_ATS_LABELS, getAtsLabel } from "./ats/fieldMapRegistry";
 
 type SiteState =
   | { kind: "loading" }
@@ -6,18 +7,9 @@ type SiteState =
   | { kind: "unsupported" }
   | { kind: "no-tab" };
 
-const ATS_LABELS: Record<string, string> = {
-  "greenhouse.io": "Greenhouse",
-  "lever.co": "Lever",
-  "ashbyhq.com": "Ashby",
-  "myworkdayjobs.com": "Workday",
-};
-
-function detectAts(host: string): string | null {
-  for (const [suffix, label] of Object.entries(ATS_LABELS)) {
-    if (host === suffix || host.endsWith(`.${suffix}`)) return label;
-  }
-  return null;
+function humanList(items: string[]): string {
+  if (items.length <= 1) return items[0] ?? "";
+  return `${items.slice(0, -1).join(", ")}, or ${items[items.length - 1]}`;
 }
 
 export function SiteStatus() {
@@ -35,7 +27,7 @@ export function SiteStatus() {
       }
       try {
         const host = new URL(tab.url).hostname;
-        const ats = detectAts(host);
+        const ats = getAtsLabel(host);
         if (ats) {
           setState({ kind: "supported", ats, title: tab.title ?? "" });
         } else {
@@ -67,8 +59,8 @@ export function SiteStatus() {
     <div className="site-status site-status--off">
       <span className="site-status__dot" aria-hidden="true" />
       <span>
-        Not on a supported ATS. Open a Greenhouse, Lever, Ashby, or Workday
-        posting to use autofill.
+        Not on a supported ATS. Open a {humanList(SUPPORTED_ATS_LABELS)} posting
+        to use autofill.
       </span>
     </div>
   );

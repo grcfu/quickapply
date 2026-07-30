@@ -73,6 +73,53 @@ export const leverFields: Record<string, FieldDef> = {
     ],
     getValue: (p) => p.identity?.links?.portfolio,
   },
+  /*
+   * Lever has no first-class education section — schools show up as custom
+   * question cards whose `name` attributes are per-posting (`cards[uuid][field3]`),
+   * so these match on label text only and read the first education entry.
+   */
+  school: {
+    kind: "input",
+    selectors: [],
+    labelPatterns: [
+      /^school( name)?\*?$/i,
+      /^university\*?$/i,
+      /^college\*?$/i,
+    ],
+    getValue: (p) => p.identity?.educations?.[0]?.school,
+  },
+  degree: {
+    kind: "input",
+    selectors: [],
+    labelPatterns: [/^degree\*?$/i, /degree earned/i, /highest degree/i],
+    getValue: (p) => p.identity?.educations?.[0]?.degree,
+  },
+  fieldOfStudy: {
+    kind: "input",
+    selectors: [],
+    labelPatterns: [
+      /^field of study\*?$/i,
+      /^major\*?$/i,
+      /^concentration\*?$/i,
+    ],
+    getValue: (p) => p.identity?.educations?.[0]?.fieldOfStudy,
+  },
+  gpa: {
+    kind: "input",
+    selectors: [],
+    labelPatterns: [/^gpa\*?$/i, /grade point average/i],
+    getValue: (p) => p.identity?.educations?.[0]?.gpa,
+  },
+  graduationDate: {
+    kind: "input",
+    selectors: [],
+    labelPatterns: [
+      /graduation date/i,
+      /^graduation( year)?\*?$/i,
+      /expected graduation/i,
+    ],
+    getValue: (p) => p.identity?.educations?.[0]?.graduationDate,
+  },
   raceEthnicity: {
     kind: "multi-checkbox",
     labelPatterns: [

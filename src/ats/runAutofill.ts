@@ -1,5 +1,6 @@
 import { getProfile } from "../storage/profileStorage";
 import type { AutofillResponse } from "../messages";
+import type { Education } from "../types/profile";
 import {
   base64ToFile,
   findMatchingOption,
@@ -9,11 +10,22 @@ import {
   setReactValue,
   setSelectValue,
 } from "./fillField";
+import {
+  findDropdownTrigger,
+  selectFromDropdown,
+  selectFromTypeahead,
+} from "./dropdown";
+import { findControlByLabel, labeledControls, matchesLabel } from "./labels";
+import { parseMonthYear } from "./profileHelpers";
 import { getFieldMapForHost } from "./fieldMapRegistry";
+import { WORKDAY_PAGE_LABELS, detectWorkdayPage } from "./workdayPages";
 import type {
+  EducationGroupFieldDef,
+  EntrySubFieldDef,
   FileFieldDef,
   InputFieldDef,
   MultiCheckboxFieldDef,
+  MultiTypeaheadFieldDef,
   SelectFieldDef,
 } from "./types";
 
@@ -43,165 +55,214 @@ export function undoLastFill(): { undone: number } {
   return { undone };
 }
 
-function findInput(def: InputFieldDef): HTMLInputElement | null {
-  for (const sel of def.selectors) {
-    const el = document.querySelector<HTMLInputElement>(sel);
-    if (el) return el;
-  }
-  if (def.labelPatterns && def.labelPatterns.length > 0) {
-    for (const label of Array.from(document.querySelectorAll("label"))) {
-      const text = (label.textContent ?? "").trim();
-      if (!def.labelPatterns.some((p) => p.test(text))) continue;
-      const forId = label.getAttribute("for");
-      if (forId) {
-        const input = document.getElementById(forId);
-        if (input instanceof HTMLInputElement) return input;
-      }
-      const nested = label.querySelector("input");
-      if (nested instanceof HTMLInputElement) return nested;
-    }
-  }
-  return null;
-}
+/**
+ * `notFound` distinguishes "this control isn't in the DOM" — which on a wizard
+ * usually just means we're on a different step — from a real failure like an
+ * option that didn't match.
+ */
+type FillResult =
+  | { ok: true }
+  | { ok: false; reason: string; notFound?: boolean };
 
-function getButtonLabel(button: HTMLElement): string {
-  const aria = button.getAttribute("aria-label");
-  if (aria?.trim()) return aria.trim();
-  const labelledBy = button.getAttribute("aria-labelledby");
-  if (labelledBy) {
-    const ids = labelledBy.split(/\s+/);
-    const texts = ids
-      .map((id) => document.getElementById(id)?.textContent?.trim() ?? "")
-      .filter(Boolean);
-    if (texts.length > 0) return texts.join(" ");
-  }
-  if (button.id) {
-    const lbl = document.querySelector(`label[for="${CSS.escape(button.id)}"]`);
-    if (lbl) return (lbl.textContent ?? "").trim();
-  }
-  const closest = button.closest("label");
-  if (closest) return (closest.textContent ?? "").trim();
-  const prev = button.previousElementSibling;
-  if (prev?.tagName === "LABEL") return (prev.textContent ?? "").trim();
-  let container: HTMLElement | null = button.parentElement;
-  for (let i = 0; i < 3 && container; i++) {
-    const label = container.querySelector("label");
-    if (label) return (label.textContent ?? "").trim();
-    container = container.parentElement;
-  }
-  return "";
-}
+const TEXTUAL_SELECTOR =
+  'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]), textarea';
 
-function findDropdownButtonByLabel(def: SelectFieldDef): HTMLElement | null {
-  const buttons = Array.from(
-    document.querySelectorAll<HTMLElement>(
-      'button[aria-haspopup="listbox"], [role="combobox"], button[aria-haspopup="true"]',
-    ),
-  );
-  for (const button of buttons) {
-    const labelText = getButtonLabel(button);
-    if (!labelText) continue;
-    if (def.labelPatterns.some((p) => p.test(labelText))) return button;
-  }
-  return null;
-}
-
-function waitForListbox(timeoutMs: number): Promise<Element | null> {
+function waitUntil(
+  predicate: () => boolean,
+  timeoutMs: number,
+): Promise<boolean> {
   return new Promise((resolve) => {
-    const existing = document.querySelector('[role="listbox"]');
-    if (existing) {
-      resolve(existing);
+    if (predicate()) {
+      resolve(true);
       return;
     }
-    const observer = new MutationObserver(() => {
-      const el = document.querySelector('[role="listbox"]');
-      if (el) {
-        observer.disconnect();
-        resolve(el);
+    const deadline = Date.now() + timeoutMs;
+    const poll = () => {
+      if (predicate()) {
+        resolve(true);
+        return;
       }
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-    setTimeout(() => {
-      observer.disconnect();
-      resolve(null);
-    }, timeoutMs);
+      if (Date.now() >= deadline) {
+        resolve(false);
+        return;
+      }
+      window.setTimeout(poll, 50);
+    };
+    window.setTimeout(poll, 50);
   });
 }
 
-async function clickDropdownAndPickOption(
-  button: HTMLElement,
-  desired: string,
-  timeoutMs = 1500,
-): Promise<boolean> {
-  button.click();
-  const listbox = await waitForListbox(timeoutMs);
-  if (!listbox) return false;
-  const options = Array.from(
-    listbox.querySelectorAll<HTMLElement>('[role="option"]'),
-  ).filter((o) => (o.textContent ?? "").trim().length > 0);
-  if (options.length === 0) {
-    document.body.click();
-    return false;
-  }
-  const target = desired.trim().toLowerCase();
-  const labeled = options.map((el) => ({
-    el,
-    text: (el.textContent ?? "").trim().toLowerCase(),
-  }));
-  const exact = labeled.find((o) => o.text === target);
-  if (exact) {
-    exact.el.click();
-    return true;
-  }
-  const subs = labeled.filter(
-    (o) => o.text.includes(target) || target.includes(o.text),
-  );
-  if (subs.length > 0) {
-    subs.sort((a, b) => a.text.length - b.text.length);
-    subs[0].el.click();
-    return true;
-  }
-  document.body.click();
-  return false;
-}
-
-function findSelectByLabel(def: SelectFieldDef): HTMLSelectElement | null {
-  for (const label of Array.from(document.querySelectorAll("label"))) {
-    const text = (label.textContent ?? "").trim();
-    if (!def.labelPatterns.some((p) => p.test(text))) continue;
-    const forId = label.getAttribute("for");
-    if (forId) {
-      const el = document.getElementById(forId);
-      if (el instanceof HTMLSelectElement) return el;
-    }
-    const nested = label.querySelector("select");
-    if (nested instanceof HTMLSelectElement) return nested;
-    let container: HTMLElement | null = label.parentElement;
-    for (let i = 0; i < 4 && container; i++) {
-      const select = container.querySelector("select");
-      if (select instanceof HTMLSelectElement) return select;
-      container = container.parentElement;
+function findBySelectors<T extends Element>(
+  selectors: string[] | undefined,
+  root: ParentNode,
+  accept?: (el: Element) => boolean,
+): T | null {
+  for (const sel of selectors ?? []) {
+    for (const el of Array.from(root.querySelectorAll(sel))) {
+      if (accept && !accept(el)) continue;
+      return el as unknown as T;
     }
   }
   return null;
 }
 
-function findCheckboxGroup(patterns: RegExp[]): HTMLElement | null {
-  for (const fs of Array.from(document.querySelectorAll("fieldset"))) {
+function findTextualInput(
+  selectors: string[] | undefined,
+  labelPatterns: RegExp[] | undefined,
+  root: ParentNode = document,
+): HTMLInputElement | HTMLTextAreaElement | null {
+  const direct = findBySelectors<HTMLInputElement | HTMLTextAreaElement>(
+    selectors,
+    root,
+  );
+  if (direct) return direct;
+  if (!labelPatterns?.length) return null;
+  return findControlByLabel<HTMLInputElement | HTMLTextAreaElement>(
+    TEXTUAL_SELECTOR,
+    labelPatterns,
+    root,
+  );
+}
+
+function fillTextual(
+  el: HTMLInputElement | HTMLTextAreaElement,
+  value: string,
+): void {
+  const prev = el.value;
+  setReactValue(el, value);
+  pushRestorer(() => setReactValue(el, prev));
+  flashFilled(el);
+}
+
+function fillInputField(
+  key: string,
+  def: InputFieldDef,
+  value: string,
+  root: ParentNode = document,
+): FillResult {
+  const el = findTextualInput(def.selectors, def.labelPatterns, root);
+  if (!el) return { ok: false, reason: `${key} (field not found)`, notFound: true };
+  fillTextual(el, value);
+  return { ok: true };
+}
+
+async function fillSelectField(
+  key: string,
+  def: SelectFieldDef,
+  value: string,
+  root: ParentNode = document,
+): Promise<FillResult> {
+  const native =
+    findBySelectors<HTMLSelectElement>(
+      def.selectors,
+      root,
+      (el) => el instanceof HTMLSelectElement,
+    ) ?? findControlByLabel<HTMLSelectElement>("select", def.labelPatterns, root);
+  if (native) {
+    const option = findMatchingOption(native, value);
+    if (!option) {
+      return { ok: false, reason: `${key} (no option matched "${value}")` };
+    }
+    const prev = native.value;
+    setSelectValue(native, option.value);
+    pushRestorer(() => setSelectValue(native, prev));
+    flashFilled(native);
+    return { ok: true };
+  }
+
+  const trigger = findDropdownTrigger(def.selectors, def.labelPatterns, root);
+  if (trigger) {
+    const before = (trigger.textContent ?? "").trim();
+    const ok = await selectFromDropdown(trigger, value);
+    if (ok) {
+      /*
+       * Workday dropdowns have no restorable `.value` — reopening and picking
+       * the previous label is the only way back, and it may no longer be an
+       * option. Undo is best-effort here by design.
+       */
+      pushRestorer(() => {
+        if (before) void selectFromDropdown(trigger, before);
+      });
+      flashFilled(trigger);
+      return { ok: true };
+    }
+    return {
+      ok: false,
+      reason: `${key} (dropdown: no option matched "${value}")`,
+    };
+  }
+  return { ok: false, reason: `${key} (select not found)`, notFound: true };
+}
+
+async function fillMultiTypeaheadField(
+  key: string,
+  def: MultiTypeaheadFieldDef,
+  values: string[],
+  root: ParentNode = document,
+): Promise<FillResult> {
+  const input =
+    findBySelectors<HTMLInputElement>(def.selectors, root) ??
+    findControlByLabel<HTMLInputElement>(
+      'input:not([type="hidden"])',
+      def.labelPatterns,
+      root,
+    );
+  if (!input) {
+    return { ok: false, reason: `${key} (field not found)`, notFound: true };
+  }
+
+  const added: string[] = [];
+  const missed: string[] = [];
+  for (const value of values) {
+    /*
+     * Sequential, not parallel: each pick re-renders the prompt list, so two
+     * concurrent typeaheads would race for the same DOM node.
+     */
+    const ok = await selectFromTypeahead(input, value, setReactValue);
+    if (ok) added.push(value);
+    else missed.push(value);
+  }
+  if (added.length === 0) {
+    return {
+      ok: false,
+      reason: `${key} (no match for: ${values.slice(0, 5).join(", ")})`,
+    };
+  }
+  /* Clear whatever partial text is left in the box after the last pick. */
+  if (input.value.trim() !== "") setReactValue(input, "");
+  flashFilled(input);
+  if (missed.length > 0) {
+    return {
+      ok: false,
+      reason: `${key} (added ${added.length}, no match for: ${missed
+        .slice(0, 5)
+        .join(", ")})`,
+    };
+  }
+  return { ok: true };
+}
+
+function findCheckboxGroup(
+  patterns: RegExp[],
+  root: ParentNode = document,
+): HTMLElement | null {
+  for (const fs of Array.from(root.querySelectorAll("fieldset"))) {
     const legend = fs.querySelector("legend");
-    const text = (legend?.textContent ?? "").trim();
-    if (patterns.some((p) => p.test(text))) return fs;
+    if (matchesLabel((legend?.textContent ?? "").trim(), patterns)) {
+      return fs as HTMLElement;
+    }
   }
   for (const el of Array.from(
-    document.querySelectorAll("label, h2, h3, h4, p, span, div"),
+    root.querySelectorAll("label, legend, h2, h3, h4, p, span, div"),
   )) {
     const text = (el.textContent ?? "").trim();
     if (text.length > 200) continue;
-    if (!patterns.some((p) => p.test(text))) continue;
+    if (!matchesLabel(text, patterns)) continue;
     let container: HTMLElement | null = el.parentElement;
     for (let i = 0; i < 4 && container; i++) {
-      const cbs = container.querySelectorAll('input[type="checkbox"]');
-      if (cbs.length >= 2) return container;
+      if (container.querySelectorAll('input[type="checkbox"]').length >= 2) {
+        return container;
+      }
       container = container.parentElement;
     }
   }
@@ -212,106 +273,87 @@ function findCheckboxByLabel(
   container: HTMLElement,
   desired: string,
 ): HTMLInputElement | null {
-  const checkboxes = Array.from(
-    container.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'),
+  const candidates = labeledControls<HTMLInputElement>(
+    'input[type="checkbox"]',
+    container,
   );
-  const candidates: { input: HTMLInputElement; text: string }[] = [];
-  for (const cb of checkboxes) {
-    let labelText = "";
-    if (cb.id) {
-      const lbl = container.querySelector(`label[for="${CSS.escape(cb.id)}"]`);
-      if (lbl) labelText = (lbl.textContent ?? "").trim();
-    }
-    if (!labelText) {
-      const parent = cb.closest("label");
-      if (parent) labelText = (parent.textContent ?? "").trim();
-    }
-    if (!labelText) continue;
-    candidates.push({ input: cb, text: labelText });
-  }
   const target = desired.trim().toLowerCase();
   if (!target) return null;
-  const exact = candidates.find((c) => c.text.toLowerCase() === target);
-  if (exact) return exact.input;
+  const exact = candidates.find((c) => c.label.toLowerCase() === target);
+  if (exact) return exact.el;
   const subs = candidates.filter((c) => {
-    const t = c.text.toLowerCase();
+    const t = c.label.toLowerCase();
     return t.includes(target) || target.includes(t);
   });
   if (subs.length > 0) {
-    subs.sort((a, b) => a.text.length - b.text.length);
-    return subs[0].input;
+    subs.sort((a, b) => a.label.length - b.label.length);
+    return subs[0].el;
   }
   return null;
 }
 
-async function fillField(
+function fillMultiCheckboxField(
   key: string,
-  def: InputFieldDef | SelectFieldDef,
-  value: string,
-): Promise<{ ok: true } | { ok: false; reason: string }> {
-  if (def.kind === "input") {
-    const el = findInput(def);
-    if (!el) return { ok: false, reason: `${key} (field not found)` };
-    const prev = el.value;
-    setReactValue(el, value);
-    pushRestorer(() => setReactValue(el, prev));
-    flashFilled(el);
-    return { ok: true };
-  }
-  const select = findSelectByLabel(def);
-  if (select) {
-    const option = findMatchingOption(select, value);
-    if (!option) {
-      return {
-        ok: false,
-        reason: `${key} (no option matched "${value}")`,
-      };
-    }
-    const prev = select.value;
-    setSelectValue(select, option.value);
-    pushRestorer(() => setSelectValue(select, prev));
-    flashFilled(select);
-    return { ok: true };
-  }
-  const button = findDropdownButtonByLabel(def);
-  if (button) {
-    const ok = await clickDropdownAndPickOption(button, value);
-    if (ok) {
-      flashFilled(button);
-      return { ok: true };
-    }
+  def: MultiCheckboxFieldDef,
+  values: string[],
+): FillResult {
+  const container = findCheckboxGroup(def.labelPatterns);
+  if (!container) {
     return {
       ok: false,
-      reason: `${key} (workday dropdown: no option matched "${value}")`,
+      reason: `${key} (checkbox group not found)`,
+      notFound: true,
     };
   }
-  return { ok: false, reason: `${key} (select not found)` };
+  let matched = 0;
+  for (const v of values) {
+    const cb = findCheckboxByLabel(container, v);
+    if (!cb) continue;
+    const prev = cb.checked;
+    setCheckboxChecked(cb, true);
+    pushRestorer(() => setCheckboxChecked(cb, prev));
+    flashFilled(cb);
+    matched++;
+  }
+  if (matched === 0) {
+    return {
+      ok: false,
+      reason: `${key} (no checkbox matched: ${values.join(", ")})`,
+    };
+  }
+  return { ok: true };
 }
 
 function findFileInput(def: FileFieldDef): HTMLInputElement | null {
-  for (const sel of def.selectors) {
-    const el = document.querySelector<HTMLInputElement>(sel);
-    if (el && el.type === "file") return el;
-  }
-  if (def.labelPatterns && def.labelPatterns.length > 0) {
-    for (const label of Array.from(document.querySelectorAll("label"))) {
-      const text = (label.textContent ?? "").trim();
-      if (!def.labelPatterns.some((p) => p.test(text))) continue;
-      const forId = label.getAttribute("for");
-      if (forId) {
-        const input = document.getElementById(forId);
-        if (input instanceof HTMLInputElement && input.type === "file") {
-          return input;
-        }
-      }
-      const nested = label.querySelector('input[type="file"]');
-      if (nested instanceof HTMLInputElement) return nested;
-      let container: HTMLElement | null = label.parentElement;
-      for (let i = 0; i < 4 && container; i++) {
-        const file = container.querySelector('input[type="file"]');
-        if (file instanceof HTMLInputElement) return file;
-        container = container.parentElement;
-      }
+  const direct = findBySelectors<HTMLInputElement>(
+    def.selectors,
+    document,
+    (el) => el instanceof HTMLInputElement && el.type === "file",
+  );
+  if (direct) return direct;
+  if (!def.labelPatterns?.length) return null;
+  const byLabel = findControlByLabel<HTMLInputElement>(
+    'input[type="file"]',
+    def.labelPatterns,
+    document,
+  );
+  if (byLabel) return byLabel;
+  /*
+   * File inputs are usually visually hidden behind a styled button and carry no
+   * usable label, so fall back to the nearest file input under a matching
+   * heading.
+   */
+  for (const el of Array.from(
+    document.querySelectorAll("label, legend, h2, h3, h4, span, div"),
+  )) {
+    const text = (el.textContent ?? "").trim();
+    if (text.length > 120) continue;
+    if (!matchesLabel(text, def.labelPatterns)) continue;
+    let container: HTMLElement | null = el.parentElement;
+    for (let i = 0; i < 4 && container; i++) {
+      const file = container.querySelector('input[type="file"]');
+      if (file instanceof HTMLInputElement) return file;
+      container = container.parentElement;
     }
   }
   return null;
@@ -321,11 +363,17 @@ function fillFileField(
   key: string,
   def: FileFieldDef,
   source: { contentBase64: string; filename: string; mimeType?: string },
-): { ok: true } | { ok: false; reason: string } {
+): FillResult {
   const input = findFileInput(def);
-  if (!input) return { ok: false, reason: `${key} (file input not found)` };
+  if (!input) {
+    return { ok: false, reason: `${key} (file input not found)`, notFound: true };
+  }
   try {
-    const file = base64ToFile(source.contentBase64, source.filename, source.mimeType);
+    const file = base64ToFile(
+      source.contentBase64,
+      source.filename,
+      source.mimeType,
+    );
     const prevFiles = input.files;
     setFileValue(input, file);
     pushRestorer(() => {
@@ -344,6 +392,195 @@ function fillFileField(
   }
 }
 
+/* ---------- repeating education section ---------- */
+
+function findGroupContainer(def: EducationGroupFieldDef): HTMLElement | null {
+  const direct = findBySelectors<HTMLElement>(def.containerSelectors, document);
+  if (direct) return direct;
+  if (!def.containerHeadingPatterns?.length) return null;
+  for (const h of Array.from(
+    document.querySelectorAll("h2, h3, h4, legend, [role='heading']"),
+  )) {
+    const text = (h.textContent ?? "").trim();
+    if (text.length > 80) continue;
+    if (!matchesLabel(text, def.containerHeadingPatterns)) continue;
+    let container: HTMLElement | null = h.parentElement;
+    for (let i = 0; i < 5 && container; i++) {
+      if (container.querySelector("input, button")) return container;
+      container = container.parentElement;
+    }
+  }
+  return null;
+}
+
+function findAddButton(
+  def: EducationGroupFieldDef,
+  container: HTMLElement,
+): HTMLElement | null {
+  const direct = findBySelectors<HTMLElement>(def.addButtonSelectors, container);
+  if (direct) return direct;
+  if (!def.addButtonLabelPatterns?.length) return null;
+  for (const btn of Array.from(
+    container.querySelectorAll<HTMLElement>('button, [role="button"]'),
+  )) {
+    const text = (btn.textContent ?? "").trim() || (btn.getAttribute("aria-label") ?? "");
+    if (matchesLabel(text.trim(), def.addButtonLabelPatterns)) return btn;
+  }
+  return null;
+}
+
+function findPanels(
+  def: EducationGroupFieldDef,
+  container: HTMLElement,
+): HTMLElement[] {
+  for (const sel of def.panelSelectors) {
+    const found = Array.from(container.querySelectorAll<HTMLElement>(sel));
+    if (found.length > 0) return found;
+  }
+  return [];
+}
+
+function fillMonthYear(
+  selectors: string[],
+  labelPatterns: RegExp[] | undefined,
+  raw: string | undefined,
+  panel: HTMLElement,
+): boolean {
+  const parsed = parseMonthYear(raw);
+  if (!parsed) return false;
+  let scope: ParentNode | null = findBySelectors<HTMLElement>(selectors, panel);
+  if (!scope && labelPatterns?.length) {
+    const yearByLabel = findControlByLabel<HTMLInputElement>(
+      TEXTUAL_SELECTOR,
+      labelPatterns,
+      panel,
+    );
+    if (yearByLabel) {
+      fillTextual(yearByLabel, parsed.year);
+      return true;
+    }
+  }
+  if (!scope) scope = panel;
+  const year = scope.querySelector<HTMLInputElement>(
+    'input[data-automation-id="dateSectionYear-input"], input[data-automation-id*="Year" i]',
+  );
+  const month = scope.querySelector<HTMLInputElement>(
+    'input[data-automation-id="dateSectionMonth-input"], input[data-automation-id*="Month" i]',
+  );
+  let wrote = false;
+  if (month && parsed.month) {
+    fillTextual(month, parsed.month);
+    wrote = true;
+  }
+  if (year) {
+    fillTextual(year, parsed.year);
+    wrote = true;
+  }
+  return wrote;
+}
+
+async function fillSubField(
+  sub: EntrySubFieldDef,
+  entry: Education,
+  panel: HTMLElement,
+): Promise<boolean> {
+  const value = sub.getValue(entry);
+  if (!value) return false;
+
+  if (sub.kind === "month-year") {
+    return fillMonthYear(sub.selectors, sub.labelPatterns, value, panel);
+  }
+  if (sub.kind === "input") {
+    const el = findTextualInput(sub.selectors, sub.labelPatterns, panel);
+    if (!el) return false;
+    fillTextual(el, value);
+    return true;
+  }
+  if (sub.kind === "dropdown") {
+    const native =
+      findBySelectors<HTMLSelectElement>(
+        sub.selectors,
+        panel,
+        (el) => el instanceof HTMLSelectElement,
+      ) ??
+      findControlByLabel<HTMLSelectElement>("select", sub.labelPatterns, panel);
+    if (native) {
+      const option = findMatchingOption(native, value);
+      if (!option) return false;
+      const prev = native.value;
+      setSelectValue(native, option.value);
+      pushRestorer(() => setSelectValue(native, prev));
+      flashFilled(native);
+      return true;
+    }
+    const trigger = findDropdownTrigger(sub.selectors, sub.labelPatterns, panel);
+    if (!trigger) return false;
+    const ok = await selectFromDropdown(trigger, value);
+    if (ok) flashFilled(trigger);
+    return ok;
+  }
+  /* typeahead */
+  const input =
+    findBySelectors<HTMLInputElement>(sub.selectors, panel) ??
+    findControlByLabel<HTMLInputElement>(
+      'input:not([type="hidden"])',
+      sub.labelPatterns,
+      panel,
+    );
+  if (!input) return false;
+  const ok = await selectFromTypeahead(input, value, setReactValue);
+  if (ok) flashFilled(input);
+  return ok;
+}
+
+async function fillEducationGroup(
+  key: string,
+  def: EducationGroupFieldDef,
+  entries: Education[],
+): Promise<FillResult> {
+  const container = findGroupContainer(def);
+  if (!container) {
+    return {
+      ok: false,
+      reason: `${key} (education section not found)`,
+      notFound: true,
+    };
+  }
+
+  const addButton = findAddButton(def, container);
+  let filledEntries = 0;
+
+  for (let i = 0; i < entries.length; i++) {
+    let panels = findPanels(def, container);
+    if (panels.length <= i) {
+      if (!addButton) break;
+      const target = i + 1;
+      addButton.click();
+      const appeared = await waitUntil(
+        () => findPanels(def, container).length >= target,
+        2000,
+      );
+      if (!appeared) break;
+      panels = findPanels(def, container);
+    }
+    const panel = panels[i];
+    if (!panel) break;
+
+    let wroteAny = false;
+    for (const sub of Object.values(def.subFields)) {
+      if (await fillSubField(sub, entries[i], panel)) wroteAny = true;
+    }
+    if (wroteAny) filledEntries++;
+  }
+
+  if (filledEntries === 0) {
+    return { ok: false, reason: `${key} (no education fields filled)` };
+  }
+  return { ok: true };
+}
+
+/* ---------- saved answers ---------- */
+
 function tokensOf(s: string): string[] {
   return s
     .toLowerCase()
@@ -351,42 +588,15 @@ function tokensOf(s: string): string[] {
     .filter((t) => t.length >= 3);
 }
 
-function inputFromLabel(
-  label: Element,
-): HTMLInputElement | HTMLTextAreaElement | null {
-  const forId = label.getAttribute("for");
-  if (forId) {
-    const el = document.getElementById(forId);
-    if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
-      return el;
-    }
-  }
-  const nested = label.querySelector("input, textarea");
-  if (
-    nested instanceof HTMLInputElement ||
-    nested instanceof HTMLTextAreaElement
-  ) {
-    return nested;
-  }
-  return null;
-}
-
 function findInputByQuestion(
   question: string,
 ): HTMLInputElement | HTMLTextAreaElement | null {
   const target = question.trim().toLowerCase();
   if (!target) return null;
-  const candidates: {
-    label: string;
-    el: HTMLInputElement | HTMLTextAreaElement;
-  }[] = [];
-  for (const lbl of Array.from(document.querySelectorAll("label"))) {
-    const text = (lbl.textContent ?? "").trim().toLowerCase();
-    if (!text) continue;
-    const el = inputFromLabel(lbl);
-    if (!el) continue;
-    candidates.push({ label: text, el });
-  }
+  const candidates = labeledControls<HTMLInputElement | HTMLTextAreaElement>(
+    TEXTUAL_SELECTOR,
+  ).map((c) => ({ el: c.el, label: c.label.toLowerCase() }));
+
   const exact = candidates.find((c) => c.label === target);
   if (exact) return exact.el;
   const subs = candidates.filter(
@@ -419,37 +629,30 @@ function truncate(s: string, max: number): string {
   return s.substring(0, max - 1) + "…";
 }
 
-function fillMultiCheckboxField(
-  key: string,
-  def: MultiCheckboxFieldDef,
-  values: string[],
-): { ok: true } | { ok: false; reason: string } {
-  const container = findCheckboxGroup(def.labelPatterns);
-  if (!container) {
-    return { ok: false, reason: `${key} (checkbox group not found)` };
+function scanUnmatchedQuestions(
+  existingAnswers: { question: string }[],
+  filledByAnswer: Set<HTMLTextAreaElement | HTMLInputElement>,
+): string[] {
+  const existingQs = existingAnswers.map((a) =>
+    a.question.trim().toLowerCase(),
+  );
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const { el, label } of labeledControls<HTMLTextAreaElement>("textarea")) {
+    if (filledByAnswer.has(el)) continue;
+    if (el.value.trim() !== "") continue;
+    if (label.length < 10 || label.length > 300) continue;
+    const lower = label.toLowerCase();
+    if (existingQs.some((q) => q === lower || lower.includes(q))) continue;
+    if (seen.has(lower)) continue;
+    seen.add(lower);
+    out.push(label);
+    if (out.length >= 5) break;
   }
-  let matched = 0;
-  const missed: string[] = [];
-  for (const v of values) {
-    const cb = findCheckboxByLabel(container, v);
-    if (!cb) {
-      missed.push(v);
-      continue;
-    }
-    const prev = cb.checked;
-    setCheckboxChecked(cb, true);
-    pushRestorer(() => setCheckboxChecked(cb, prev));
-    flashFilled(cb);
-    matched++;
-  }
-  if (matched === 0) {
-    return {
-      ok: false,
-      reason: `${key} (no checkbox matched: ${values.join(", ")})`,
-    };
-  }
-  return { ok: true };
+  return out;
 }
+
+/* ---------- orchestration ---------- */
 
 export async function runAutofill(): Promise<AutofillResponse> {
   const profile = await getProfile();
@@ -472,18 +675,36 @@ export async function runAutofill(): Promise<AutofillResponse> {
       error: `No adapter for host ${window.location.hostname}.`,
     };
   }
+
+  const currentPage = detectWorkdayPage();
   const fields: string[] = [];
   const skipped: string[] = [];
+  const offPage: string[] = [];
   pendingSnapshot = [];
+
   for (const [key, def] of Object.entries(fieldMap)) {
-    let result: { ok: true } | { ok: false; reason: string };
+    let result: FillResult;
     if (def.kind === "multi-checkbox") {
       const values = def.getValues(profile);
-      if (!values || values.length === 0) {
+      if (!values?.length) {
         skipped.push(`${key} (no values in profile)`);
         continue;
       }
       result = fillMultiCheckboxField(key, def, values);
+    } else if (def.kind === "multi-typeahead") {
+      const values = def.getValues(profile);
+      if (!values?.length) {
+        skipped.push(`${key} (no values in profile)`);
+        continue;
+      }
+      result = await fillMultiTypeaheadField(key, def, values);
+    } else if (def.kind === "education-group") {
+      const entries = def.getEntries(profile);
+      if (!entries?.length) {
+        skipped.push(`${key} (no education in profile)`);
+        continue;
+      }
+      result = await fillEducationGroup(key, def, entries);
     } else if (def.kind === "file") {
       const file = def.getFile(profile);
       if (!file) {
@@ -491,32 +712,48 @@ export async function runAutofill(): Promise<AutofillResponse> {
         continue;
       }
       result = fillFileField(key, def, file);
+    } else if (def.kind === "select") {
+      const value = def.getValue(profile);
+      if (!value) {
+        skipped.push(`${key} (no value in profile)`);
+        continue;
+      }
+      result = await fillSelectField(key, def, value);
     } else {
       const value = def.getValue(profile);
       if (!value) {
         skipped.push(`${key} (no value in profile)`);
         continue;
       }
-      result = await fillField(key, def, value);
+      result = fillInputField(key, def, value);
     }
+
     if (result.ok) {
       fields.push(key);
+      continue;
+    }
+    /*
+     * A control that simply isn't in the DOM and belongs to a step we know we're
+     * not on is expected, not a failure — report it separately so genuine
+     * problems stay visible.
+     */
+    if (result.notFound && def.page && currentPage && def.page !== currentPage) {
+      offPage.push(`${key} (on "${WORKDAY_PAGE_LABELS[def.page]}")`);
     } else {
       skipped.push(result.reason);
     }
   }
+
   const filledByAnswer = new Set<HTMLTextAreaElement | HTMLInputElement>();
   for (const answer of profile.answers ?? []) {
     const input = findInputByQuestion(answer.question);
     if (!input) continue;
     if (input.value.trim() !== "") continue;
-    const prev = input.value;
-    setReactValue(input, answer.answer);
-    pushRestorer(() => setReactValue(input, prev));
-    flashFilled(input);
+    fillTextual(input, answer.answer);
     filledByAnswer.add(input);
     fields.push(`answer: "${truncate(answer.question, 40)}"`);
   }
+
   const unmatchedQuestions = scanUnmatchedQuestions(
     profile.answers ?? [],
     filledByAnswer,
@@ -528,49 +765,8 @@ export async function runAutofill(): Promise<AutofillResponse> {
     filled: fields.length,
     fields,
     skipped,
+    offPage,
+    currentStep: currentPage ? WORKDAY_PAGE_LABELS[currentPage] : undefined,
     unmatchedQuestions,
   };
-}
-
-function getTextareaLabel(ta: HTMLTextAreaElement): string | null {
-  if (ta.id) {
-    const lbl = document.querySelector(`label[for="${CSS.escape(ta.id)}"]`);
-    if (lbl) return (lbl.textContent ?? "").trim();
-  }
-  const closest = ta.closest("label");
-  if (closest) return (closest.textContent ?? "").trim();
-  const prev = ta.previousElementSibling;
-  if (prev?.tagName === "LABEL") return (prev.textContent ?? "").trim();
-  return null;
-}
-
-function scanUnmatchedQuestions(
-  existingAnswers: { question: string }[],
-  filledByAnswer: Set<HTMLTextAreaElement | HTMLInputElement>,
-): string[] {
-  const seen = new Set<string>();
-  const existingQs = existingAnswers.map((a) =>
-    a.question.trim().toLowerCase(),
-  );
-  for (const ta of Array.from(document.querySelectorAll("textarea"))) {
-    if (!(ta instanceof HTMLTextAreaElement)) continue;
-    if (filledByAnswer.has(ta)) continue;
-    if (ta.value.trim() !== "") continue;
-    const label = getTextareaLabel(ta);
-    if (!label || label.length < 10 || label.length > 300) continue;
-    const lower = label.toLowerCase();
-    if (existingQs.some((q) => q === lower || lower.includes(q))) continue;
-    if (seen.has(lower)) continue;
-    seen.add(lower);
-    if (seen.size >= 5) break;
-  }
-  return [...seen].map((lower) => {
-    /* preserve original casing by re-scanning */
-    for (const ta of Array.from(document.querySelectorAll("textarea"))) {
-      if (!(ta instanceof HTMLTextAreaElement)) continue;
-      const label = getTextareaLabel(ta);
-      if (label && label.toLowerCase() === lower) return label;
-    }
-    return lower;
-  });
 }

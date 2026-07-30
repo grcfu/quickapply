@@ -127,6 +127,13 @@ export type Profile = {
   identity?: Identity;
   resumes?: ResumeProfile[];
   answers?: AnswerEntry[];
+  /**
+   * Explicit skill list, used for ATSs that ask for skills one at a time
+   * (Workday). Additive and optional, so profiles written before this existed
+   * still read back fine — no schema bump needed. When absent, `pickSkills`
+   * falls back to the default resume's parsed skills.
+   */
+  skills?: string[];
   settings?: Settings;
   metadata: ProfileMetadata;
 };
