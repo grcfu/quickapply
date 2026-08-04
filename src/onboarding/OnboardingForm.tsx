@@ -12,7 +12,7 @@ import { extractTextFromPdf } from "../resume/extractText";
 import { extractFields } from "../resume/extractFields";
 import type { ExtractedFields } from "../resume/extractFields";
 import { fileToBase64 } from "../resume/fileUtils";
-import type { Education, Experience } from "../types/profile";
+import type { Certification, Education, Experience } from "../types/profile";
 
 type YesNo = "" | "yes" | "no";
 
@@ -53,9 +53,20 @@ function trimExperience(e: Experience): Experience {
   return {
     company: e.company?.trim() || undefined,
     title: e.title?.trim() || undefined,
+    location: e.location?.trim() || undefined,
     startDate: e.startDate?.trim() || undefined,
     endDate: e.endDate?.trim() || undefined,
     description: e.description?.trim() || undefined,
+  };
+}
+
+function trimCertification(c: Certification): Certification {
+  return {
+    name: c.name?.trim() || undefined,
+    issuer: c.issuer?.trim() || undefined,
+    issuedDate: c.issuedDate?.trim() || undefined,
+    expirationDate: c.expirationDate?.trim() || undefined,
+    credentialId: c.credentialId?.trim() || undefined,
   };
 }
 
@@ -123,6 +134,7 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
   const [experiences, setExperiences] = useState<Experience[]>([]);
   /* Held as raw comma-separated text so partial typing survives a draft save. */
   const [skills, setSkills] = useState("");
+  const [certifications, setCertifications] = useState<Certification[]>([]);
   const [linkedin, setLinkedin] = useState("");
   const [github, setGithub] = useState("");
   const [portfolio, setPortfolio] = useState("");
@@ -162,6 +174,9 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
       }
       if (identity.experiences) {
         setExperiences(identity.experiences);
+      }
+      if (identity.certifications) {
+        setCertifications(identity.certifications);
       }
       if (identity.links?.linkedin) setLinkedin(identity.links.linkedin);
       if (identity.links?.github) setGithub(identity.links.github);
@@ -283,6 +298,20 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
     if (!onCancel) return;
     await clearOnboardingDraft();
     onCancel();
+  }
+
+  function updateCertification(idx: number, patch: Partial<Certification>) {
+    setCertifications((prev) =>
+      prev.map((c, i) => (i === idx ? { ...c, ...patch } : c)),
+    );
+  }
+
+  function addCertification() {
+    setCertifications((prev) => [...prev, {}]);
+  }
+
+  function removeCertification(idx: number) {
+    setCertifications((prev) => prev.filter((_, i) => i !== idx));
   }
 
   function updateEducation(idx: number, patch: Partial<Education>) {
@@ -427,6 +456,9 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
       const trimmedEducations = educations.map(trimEducation).filter(hasAnyValue);
       const trimmedExperiences = experiences.map(trimExperience).filter(hasAnyValue);
       const parsedSkills = splitSkills(skills);
+      const trimmedCertifications = certifications
+        .map(trimCertification)
+        .filter(hasAnyValue);
       await updateProfile({
         identity: {
           legalName: {
@@ -455,6 +487,10 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
             portfolio: portfolio.trim() || undefined,
           },
           educations: trimmedEducations.length > 0 ? trimmedEducations : undefined,
+          certifications:
+            trimmedCertifications.length > 0
+              ? trimmedCertifications
+              : undefined,
           experiences: trimmedExperiences.length > 0 ? trimmedExperiences : undefined,
           demographics: {
             gender: gender.trim() || undefined,
@@ -757,6 +793,86 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
         </label>
       </Section>
 
+      <Section title="Certifications" open={false}>
+        {certifications.map((cert, idx) => (
+          <div key={idx} className="onboarding__entry">
+            <label className="onboarding__field">
+              <span className="onboarding__label">Certification</span>
+              <input
+                className="onboarding__input"
+                value={cert.name ?? ""}
+                onChange={(e) =>
+                  updateCertification(idx, { name: e.target.value })
+                }
+                placeholder="e.g. Google Cybersecurity Certificate"
+              />
+            </label>
+            <div className="onboarding__row">
+              <label className="onboarding__field">
+                <span className="onboarding__label">Issuer</span>
+                <input
+                  className="onboarding__input"
+                  value={cert.issuer ?? ""}
+                  onChange={(e) =>
+                    updateCertification(idx, { issuer: e.target.value })
+                  }
+                  placeholder="e.g. Google"
+                />
+              </label>
+              <label className="onboarding__field">
+                <span className="onboarding__label">Credential ID</span>
+                <input
+                  className="onboarding__input"
+                  value={cert.credentialId ?? ""}
+                  onChange={(e) =>
+                    updateCertification(idx, { credentialId: e.target.value })
+                  }
+                  placeholder="e.g. J43FE6UCZWOF"
+                />
+              </label>
+            </div>
+            <div className="onboarding__row">
+              <label className="onboarding__field">
+                <span className="onboarding__label">Issued</span>
+                <input
+                  className="onboarding__input"
+                  value={cert.issuedDate ?? ""}
+                  onChange={(e) =>
+                    updateCertification(idx, { issuedDate: e.target.value })
+                  }
+                  placeholder="YYYY-MM or YYYY-MM-DD"
+                />
+              </label>
+              <label className="onboarding__field">
+                <span className="onboarding__label">Expires</span>
+                <input
+                  className="onboarding__input"
+                  value={cert.expirationDate ?? ""}
+                  onChange={(e) =>
+                    updateCertification(idx, { expirationDate: e.target.value })
+                  }
+                  placeholder="Leave blank if none"
+                />
+              </label>
+            </div>
+            <button
+              type="button"
+              className="onboarding__entry-remove"
+              onClick={() => removeCertification(idx)}
+            >
+              Remove this certification
+            </button>
+          </div>
+        ))}
+        <button
+          type="button"
+          className="onboarding__entry-add"
+          onClick={addCertification}
+        >
+          + Add a certification
+        </button>
+      </Section>
+
       <Section title="Experience" open={false}>
         {experiences.map((exp, idx) => (
           <div key={idx} className="onboarding__entry">
@@ -784,6 +900,17 @@ export function OnboardingForm({ onComplete, onCancel }: Props) {
                 />
               </label>
             </div>
+            <label className="onboarding__field">
+              <span className="onboarding__label">Location</span>
+              <input
+                className="onboarding__input"
+                value={exp.location ?? ""}
+                onChange={(e) =>
+                  updateExperience(idx, { location: e.target.value })
+                }
+                placeholder="e.g. St. Louis, MO"
+              />
+            </label>
             <div className="onboarding__row">
               <label className="onboarding__field">
                 <span className="onboarding__label">Start date</span>
