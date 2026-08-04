@@ -4,9 +4,14 @@
   "version": "0.0.1",
   "description": "Fast, local autofill for job applications across major ATS platforms.",
   "action": {
-    "default_popup": "index.html"
+    "default_title": "QuickApply"
   },
-  "permissions": ["storage", "activeTab", "scripting"],
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "sidePanel"
+  ],
   "host_permissions": [
     "https://*.greenhouse.io/*",
     "https://*.lever.co/*",
@@ -27,8 +32,13 @@
         "https://*.myworkdayjobs.com/*",
         "https://*.myworkdaysite.com/*"
       ],
-      "js": ["src/content.ts"],
+      "js": [
+        "src/content.ts"
+      ],
       "all_frames": true
     }
-  ]
+  ],
+  "side_panel": {
+    "default_path": "index.html"
+  }
 }
