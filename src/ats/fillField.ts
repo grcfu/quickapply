@@ -1,5 +1,35 @@
 type FillableInput = HTMLInputElement | HTMLTextAreaElement;
 
+/**
+ * Focus/blur around a write, the way a real edit produces them.
+ *
+ * Workday captures a field into its own form model on blur, not on input.
+ * Writing the value and firing input/change updates React and puts the text on
+ * screen, but the value Workday validates when you press Submit is only read
+ * out of the field when it loses focus — which is why a form that *looked*
+ * completely filled still reported required fields as empty, and why retyping
+ * (or pasting over) the same text by hand fixed it: that produced the blur.
+ *
+ * Native focus()/blur() emit the real focus/focusin and blur/focusout pairs.
+ * The synthetic fallback is for controls the browser refuses to focus — offscreen
+ * or inside an inert wrapper — where the framework still needs to see the event.
+ */
+export function focusField(el: HTMLElement): void {
+  el.focus();
+  if (document.activeElement === el) return;
+  el.dispatchEvent(new FocusEvent("focus", { bubbles: false }));
+  el.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+}
+
+export function blurField(el: HTMLElement): void {
+  if (document.activeElement === el) {
+    el.blur();
+    return;
+  }
+  el.dispatchEvent(new FocusEvent("blur", { bubbles: false }));
+  el.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+}
+
 export function setReactValue(el: FillableInput, value: string): void {
   const proto =
     el instanceof HTMLTextAreaElement

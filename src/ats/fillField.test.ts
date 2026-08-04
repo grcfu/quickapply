@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findMatchingOption } from "./fillField";
+import { blurField, findMatchingOption, focusField } from "./fillField";
 
 function makeSelect(
   options: { value: string; text: string }[],
@@ -78,5 +78,60 @@ describe("findMatchingOption", () => {
       { value: "yes", text: "Yes" },
     ]);
     expect(findMatchingOption(select, "Yes")?.value).toBe("yes");
+  });
+});
+
+describe("focusField / blurField", () => {
+  /*
+   * The reason these exist at all: Workday reads a field into its form model on
+   * blur, so a value written without the focus/blur bracket looked filled on
+   * screen but came back "required" on Submit.
+   */
+  it("emits focus then blur around a real input", () => {
+    const input = document.createElement("input");
+    document.body.appendChild(input);
+    const seen: string[] = [];
+    for (const type of ["focus", "focusin", "blur", "focusout"]) {
+      input.addEventListener(type, () => seen.push(type));
+    }
+
+    focusField(input);
+    expect(document.activeElement).toBe(input);
+    blurField(input);
+
+    expect(seen).toContain("focus");
+    expect(seen).toContain("blur");
+    expect(document.activeElement).not.toBe(input);
+    input.remove();
+  });
+
+  it("falls back to synthetic events for a control the browser won't focus", () => {
+    /* Detached from the document, so .focus() is a no-op. */
+    const input = document.createElement("input");
+    const seen: string[] = [];
+    input.addEventListener("focus", () => seen.push("focus"));
+    input.addEventListener("focusin", () => seen.push("focusin"));
+    input.addEventListener("blur", () => seen.push("blur"));
+    input.addEventListener("focusout", () => seen.push("focusout"));
+
+    focusField(input);
+    blurField(input);
+
+    expect(seen).toEqual(["focus", "focusin", "blur", "focusout"]);
+  });
+
+  it("bubbles focusout so a wrapper-level handler sees it", () => {
+    const wrapper = document.createElement("div");
+    const input = document.createElement("input");
+    wrapper.appendChild(input);
+    document.body.appendChild(wrapper);
+    let bubbled = 0;
+    wrapper.addEventListener("focusout", () => bubbled++);
+
+    focusField(input);
+    blurField(input);
+
+    expect(bubbled).toBe(1);
+    wrapper.remove();
   });
 });

@@ -130,8 +130,8 @@ export const workdayFields: Record<string, FieldDef> = {
     ],
     containerHeadingPatterns: [/^education$/i],
     addButtonSelectors: [
+      '[data-automation-id="add-button"]',
       '[data-automation-id="Add"]',
-      'button[data-automation-id="add-button"]',
       '[data-automation-id="addButton"]',
     ],
     addButtonLabelPatterns: [/^add$/i, /^add another$/i, /^add education$/i],
@@ -141,26 +141,34 @@ export const workdayFields: Record<string, FieldDef> = {
     ],
     getEntries: (p) => p.identity?.educations,
     subFields: {
+      /*
+       * "School or University" reads "0 items selected" — it's a multiselect
+       * typeahead, not a text field. The page even says so: "type a few letters
+       * and press ENTER". Writing text into it leaves the entry empty.
+       */
       school: {
-        kind: "input",
+        kind: "typeahead",
         selectors: [
-          'input[data-automation-id="school"]',
-          'input[data-automation-id="schoolName"]',
+          '[data-automation-id="formField-school"]',
+          '[data-automation-id="formField-schoolName"]',
         ],
-        labelPatterns: [/^school( name)?\*?$/i, /^university\*?$/i],
+        labelPatterns: [/^school( or university)?\*?$/i, /^university\*?$/i],
         getValue: (e) => e.school,
       },
       degree: {
         kind: "dropdown",
-        selectors: ['[data-automation-id="degree"]'],
+        selectors: [
+          '[data-automation-id="formField-degree"]',
+          '[data-automation-id="degree"]',
+        ],
         labelPatterns: [/^degree\*?$/i],
         getValue: (e) => e.degree,
       },
       fieldOfStudy: {
         kind: "typeahead",
         selectors: [
-          'input[data-automation-id="field-of-study"]',
-          '[data-automation-id="formField-field-of-study"] input',
+          '[data-automation-id="formField-field-of-study"]',
+          '[data-automation-id="formField-fieldOfStudy"]',
         ],
         labelPatterns: [/^field of study\*?$/i, /^major\*?$/i],
         getValue: (e) => e.fieldOfStudy,
@@ -168,8 +176,8 @@ export const workdayFields: Record<string, FieldDef> = {
       gpa: {
         kind: "input",
         selectors: [
-          'input[data-automation-id="gradeAverage"]',
-          'input[data-automation-id="gpa"]',
+          '[data-automation-id="formField-gradeAverage"]',
+          '[data-automation-id="formField-gpa"]',
         ],
         labelPatterns: [/^gpa\*?$/i, /overall result/i, /grade average/i],
         getValue: (e) => e.gpa,
@@ -177,12 +185,226 @@ export const workdayFields: Record<string, FieldDef> = {
       graduationDate: {
         kind: "month-year",
         selectors: [
+          '[data-automation-id="formField-lastYearAttended"]',
+          '[data-automation-id="formField-endDate"]',
           '[data-automation-id="lastYearAttended"]',
-          '[data-automation-id="endDate"]',
-          '[data-automation-id="graduationDate"]',
         ],
         labelPatterns: [/last year attended/i, /graduation/i],
         getValue: (e) => e.graduationDate,
+      },
+    },
+  },
+
+  experience: {
+    kind: "experience-group",
+    page: "myExperience",
+    containerSelectors: [
+      '[data-automation-id="workExperienceSection"]',
+      '[data-automation-id="work-experience-section"]',
+    ],
+    containerHeadingPatterns: [/^work experience$/i, /^experience$/i],
+    addButtonSelectors: [
+      '[data-automation-id="add-button"]',
+      '[data-automation-id="Add"]',
+      '[data-automation-id="addButton"]',
+    ],
+    addButtonLabelPatterns: [
+      /^add$/i,
+      /^add another$/i,
+      /^add work experience$/i,
+    ],
+    panelSelectors: [
+      '[data-automation-id="panelSet-Item"]',
+      '[data-automation-id="workExperienceEntry"]',
+    ],
+    getEntries: (p) => p.identity?.experiences,
+    subFields: {
+      jobTitle: {
+        kind: "input",
+        selectors: [
+          '[data-automation-id="formField-jobTitle"]',
+          'input[data-automation-id="jobTitle"]',
+        ],
+        labelPatterns: [/^job title\*?$/i, /^title\*?$/i, /^position\*?$/i],
+        getValue: (e) => e.title,
+      },
+      company: {
+        kind: "input",
+        selectors: [
+          '[data-automation-id="formField-companyName"]',
+          '[data-automation-id="formField-company"]',
+        ],
+        labelPatterns: [/^company\*?$/i, /^employer\*?$/i],
+        getValue: (e) => e.company,
+      },
+      location: {
+        kind: "input",
+        selectors: [
+          '[data-automation-id="formField-location"]',
+          '[data-automation-id="formField-jobLocation"]',
+        ],
+        labelPatterns: [/^location\*?$/i, /^city\*?$/i],
+        getValue: (e) => e.location,
+      },
+      /*
+       * "To" is required unless this is ticked, so an ongoing role (no endDate)
+       * fails validation without it.
+       */
+      currentlyWorkHere: {
+        kind: "checkbox",
+        selectors: [
+          '[data-automation-id="formField-currentlyWorkHere"]',
+          '[data-automation-id="currentlyWorkHere"]',
+        ],
+        labelPatterns: [/^i currently work here$/i],
+        getValue: (e) => (e.endDate?.trim() ? undefined : "yes"),
+      },
+      description: {
+        kind: "input",
+        selectors: [
+          '[data-automation-id="formField-roleDescription"]',
+          '[data-automation-id="formField-description"]',
+        ],
+        labelPatterns: [/^role description\*?$/i, /^description\*?$/i],
+        getValue: (e) => e.description,
+      },
+      startDate: {
+        kind: "month-year",
+        selectors: [
+          '[data-automation-id="formField-startDate"]',
+          '[data-automation-id="startDate"]',
+        ],
+        labelPatterns: [/^from\*?$/i, /start date/i],
+        getValue: (e) => e.startDate,
+      },
+      endDate: {
+        kind: "month-year",
+        selectors: [
+          '[data-automation-id="formField-endDate"]',
+          '[data-automation-id="endDate"]',
+        ],
+        labelPatterns: [/^to\*?$/i, /end date/i],
+        getValue: (e) => e.endDate,
+      },
+    },
+  },
+
+  certifications: {
+    kind: "certification-group",
+    page: "myExperience",
+    containerSelectors: [
+      '[data-automation-id="certificationSection"]',
+      '[data-automation-id="certificationsSection"]',
+    ],
+    containerHeadingPatterns: [
+      /^certifications? and licenses?$/i,
+      /^certifications?$/i,
+    ],
+    addButtonSelectors: [
+      '[data-automation-id="add-button"]',
+      '[data-automation-id="Add"]',
+      '[data-automation-id="addButton"]',
+    ],
+    addButtonLabelPatterns: [/^add$/i, /^add another$/i],
+    panelSelectors: [
+      '[data-automation-id="panelSet-Item"]',
+      '[data-automation-id="certificationEntry"]',
+    ],
+    getEntries: (p) => p.identity?.certifications,
+    subFields: {
+      /* "0 items selected" — a multiselect prompt, same as School. */
+      name: {
+        kind: "typeahead",
+        selectors: [
+          '[data-automation-id="formField-certification"]',
+          '[data-automation-id="formField-certificationName"]',
+        ],
+        labelPatterns: [/^certification\*?$/i, /^certification name\*?$/i],
+        getValue: (c) => c.name,
+      },
+      number: {
+        kind: "input",
+        selectors: [
+          '[data-automation-id="formField-certificationNumber"]',
+          '[data-automation-id="formField-number"]',
+        ],
+        labelPatterns: [/^certification number\*?$/i, /^number\*?$/i],
+        getValue: (c) => c.credentialId,
+      },
+      /* MM/DD/YYYY here, unlike the MM/YYYY used elsewhere on the form. */
+      issuedDate: {
+        kind: "month-year",
+        selectors: [
+          '[data-automation-id="formField-issuedDate"]',
+          '[data-automation-id="formField-issued"]',
+        ],
+        labelPatterns: [/^issued date\*?$/i, /^issued\*?$/i],
+        getValue: (c) => c.issuedDate,
+      },
+      expirationDate: {
+        kind: "month-year",
+        selectors: [
+          '[data-automation-id="formField-expirationDate"]',
+          '[data-automation-id="formField-expiration"]',
+        ],
+        labelPatterns: [/^expiration date\*?$/i, /^expires\*?$/i],
+        getValue: (c) => c.expirationDate,
+      },
+      attachment: {
+        kind: "file",
+        selectors: [
+          '[data-automation-id="formField-attachments"]',
+          '[data-automation-id="formField-attachment"]',
+          'input[type="file"]',
+        ],
+        labelPatterns: [/^attachments?\*?$/i],
+        getFile: (c) => c.attachment,
+      },
+    },
+  },
+
+  /*
+   * Websites is an Add-button repeating section, not a set of fixed inputs — the
+   * URL field doesn't exist in the DOM until a row is added, so the plain input
+   * selectors this used to rely on could never match.
+   *
+   * LinkedIn is excluded on purpose: Workday gives it a dedicated field, handled
+   * by linkedinUrl below.
+   */
+  websites: {
+    kind: "website-group",
+    page: "myExperience",
+    containerSelectors: [
+      '[data-automation-id="websiteSection"]',
+      '[data-automation-id="websitePanelSet"]',
+    ],
+    containerHeadingPatterns: [/^websites?$/i, /^web addresses$/i],
+    addButtonSelectors: [
+      '[data-automation-id="add-button"]',
+      '[data-automation-id="Add"]',
+      '[data-automation-id="addButton"]',
+    ],
+    addButtonLabelPatterns: [/^add$/i, /^add another$/i, /^add website$/i],
+    panelSelectors: [
+      '[data-automation-id="panelSet-Item"]',
+      '[data-automation-id="websiteEntry"]',
+    ],
+    getEntries: (p) => {
+      const links = p.identity?.links;
+      return [links?.github, links?.portfolio]
+        .filter((url): url is string => Boolean(url?.trim()))
+        .map((url) => ({ url }));
+    },
+    subFields: {
+      url: {
+        kind: "input",
+        selectors: [
+          '[data-automation-id="formField-website"]',
+          '[data-automation-id="formField-url"]',
+          'input[data-automation-id="website"]',
+        ],
+        labelPatterns: [/^url\*?$/i, /^website\*?$/i, /^web address\*?$/i],
+        getValue: (e) => e.url,
       },
     },
   },
@@ -236,25 +458,26 @@ export const workdayFields: Record<string, FieldDef> = {
     labelPatterns: [/linkedin( url| profile)?/i],
     getValue: (p) => p.identity?.links?.linkedin,
   },
+  /*
+   * GitHub and portfolio normally go through the `websites` group above. These
+   * remain only for tenants that expose a dedicated named field instead.
+   *
+   * The generic `*website*` selector was deliberately dropped: it matched the
+   * URL input inside the Websites panel, so it overwrote row 1 right after the
+   * group had filled it.
+   */
   githubUrl: {
     kind: "input",
     page: "myExperience",
     selectors: ['input[data-automation-id*="github" i]'],
-    labelPatterns: [/github( url| profile)?/i],
+    labelPatterns: [/^github( url| profile)?\*?$/i],
     getValue: (p) => p.identity?.links?.github,
   },
   portfolioUrl: {
     kind: "input",
     page: "myExperience",
-    selectors: [
-      'input[data-automation-id*="portfolio" i]',
-      'input[data-automation-id*="website" i]',
-    ],
-    labelPatterns: [
-      /^portfolio( url)?\*?$/i,
-      /personal website/i,
-      /^website( url)?\*?$/i,
-    ],
+    selectors: ['input[data-automation-id*="portfolio" i]'],
+    labelPatterns: [/^portfolio( url)?\*?$/i, /^personal website\*?$/i],
     getValue: (p) => p.identity?.links?.portfolio,
   },
   gender: {

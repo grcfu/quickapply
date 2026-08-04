@@ -8,6 +8,7 @@ import {
 } from "../storage/profileStorage";
 import { makeSampleProfile } from "./sampleProfile";
 import type { Profile } from "../types/profile";
+import type { DumpFormRequest, DumpFormResponse } from "../messages";
 
 type Status =
   | { kind: "idle" }
@@ -17,6 +18,7 @@ type Status =
 export function DebugPanel() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [showJson, setShowJson] = useState(false);
+  const [dump, setDump] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -81,6 +83,57 @@ export function DebugPanel() {
     fileInputRef.current?.click();
   }
 
+  /**
+   * Copies a structural snapshot of the active page's form. Used to write
+   * selectors for an ATS with no stable automation hooks — no field values are
+   * included, only labels and attributes.
+   */
+  async function onCopyStructure() {
+    setDump(null);
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+    if (!tab?.id) {
+      setStatus({ kind: "error", message: "No active tab." });
+      return;
+    }
+
+    /*
+     * The three failures here have completely different fixes, so they get
+     * distinct messages. Reporting all of them as "couldn't reach the page"
+     * once sent us hunting a messaging bug that was really a stale tab.
+     */
+    let resp: DumpFormResponse;
+    try {
+      const req: DumpFormRequest = { type: "dumpForm" };
+      resp = (await chrome.tabs.sendMessage(tab.id, req)) as DumpFormResponse;
+    } catch {
+      setStatus({
+        kind: "error",
+        message:
+          "No content script in this tab. Reload the extension, then refresh the page — content scripts only inject on page load.",
+      });
+      return;
+    }
+    if (!resp?.ok || !resp.dump) {
+      setStatus({
+        kind: "error",
+        message: "Page reached, but it reported no form controls.",
+      });
+      return;
+    }
+
+    /* Clipboard writes can be refused; showing the text is the fallback. */
+    try {
+      await navigator.clipboard.writeText(resp.dump);
+      reportOk(`Copied page structure (${resp.dump.length} chars).`);
+    } catch {
+      setDump(resp.dump);
+      reportOk("Clipboard blocked — select the text below and copy it.");
+    }
+  }
+
   async function onImportFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
@@ -116,6 +169,12 @@ export function DebugPanel() {
         </button>
         <button className="debug__btn" onClick={onImportClick}>
           Import profile
+        </button>
+        <button
+          className="debug__btn"
+          onClick={() => void onCopyStructure()}
+        >
+          Copy page structure
         </button>
         <button
           className="debug__btn debug__btn--danger"
@@ -162,6 +221,16 @@ export function DebugPanel() {
             ? JSON.stringify(profile, null, 2)
             : "(no profile in storage)"}
         </pre>
+      )}
+
+      {dump !== null && (
+        <textarea
+          className="debug__json"
+          readOnly
+          rows={12}
+          value={dump}
+          onFocus={(e) => e.currentTarget.select()}
+        />
       )}
       </div>
     </details>

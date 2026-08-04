@@ -1,5 +1,6 @@
 import { greenhouseFieldMap } from "./greenhouseFields";
 import { leverFields } from "./leverFields";
+import { tiktokFields } from "./tiktokFields";
 import { workdayFields } from "./workdayFields";
 import type { FieldDef } from "./types";
 
@@ -14,12 +15,18 @@ type Adapter = {
 /*
  * Workday tenants live on both myworkdayjobs.com (wd1/wd3/wd5 subdomains) and
  * myworkdaysite.com, which newer external career sites use.
+ *
+ * TikTok runs ByteDance's in-house ATS, not a third-party one. The application
+ * form is served from lifeattiktok.com and careers.tiktok.com, which are the
+ * same product behind two brands.
  */
 const adapters: Adapter[] = [
   { hostSuffix: "greenhouse.io", label: "Greenhouse", fieldMap: greenhouseFieldMap },
   { hostSuffix: "lever.co", label: "Lever", fieldMap: leverFields },
   { hostSuffix: "myworkdayjobs.com", label: "Workday", fieldMap: workdayFields },
   { hostSuffix: "myworkdaysite.com", label: "Workday", fieldMap: workdayFields },
+  { hostSuffix: "lifeattiktok.com", label: "TikTok", fieldMap: tiktokFields },
+  { hostSuffix: "careers.tiktok.com", label: "TikTok", fieldMap: tiktokFields },
 ];
 
 function matches(hostname: string, suffix: string): boolean {

@@ -1,8 +1,11 @@
-import { runAutofill, undoLastFill } from "./ats/runAutofill";
+import { requestStop, runAutofill, undoLastFill } from "./ats/runAutofill";
+import { dumpForm } from "./ats/dumpForm";
 import { isSupportedHost } from "./ats/fieldMapRegistry";
 import type {
   AutofillResponse,
+  DumpFormResponse,
   ExtensionMessage,
+  StopResponse,
   UndoResponse,
 } from "./messages";
 
@@ -29,16 +32,36 @@ if (canFill) {
       if (msg?.type === "autofill") {
         runAutofill().then(
           (response: AutofillResponse) => sendResponse(response),
-          (err: unknown) =>
+          (err: unknown) => {
+            /*
+             * Include the throw site. A bare "Illegal invocation" is
+             * unactionable — the frame that raised it is the whole diagnosis.
+             */
+            const message = err instanceof Error ? err.message : String(err);
+            const frame =
+              err instanceof Error && err.stack
+                ? err.stack.split("\n").slice(1, 3).join(" | ").trim()
+                : "";
+            console.error("[QuickApply] autofill failed:", err);
             sendResponse({
               ok: false,
               filled: 0,
               fields: [],
               skipped: [],
-              error: err instanceof Error ? err.message : String(err),
-            } satisfies AutofillResponse),
+              error: frame ? `${message} — at ${frame}` : message,
+            } satisfies AutofillResponse);
+          },
         );
         return true;
+      }
+      if (msg?.type === "stop") {
+        /* Synchronous: the in-flight run polls this flag between steps. */
+        sendResponse({ ok: requestStop() } satisfies StopResponse);
+        return false;
+      }
+      if (msg?.type === "dumpForm") {
+        sendResponse({ ok: true, dump: dumpForm() } satisfies DumpFormResponse);
+        return false;
       }
       if (msg?.type === "undo") {
         const result = undoLastFill();

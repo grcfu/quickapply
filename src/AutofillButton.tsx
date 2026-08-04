@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { addAnswer } from "./storage/profileStorage";
-import { isSupportedHost } from "./ats/fieldMapRegistry";
+import { SUPPORTED_ATS_LABELS, isSupportedHost } from "./ats/fieldMapRegistry";
 import type {
   AutofillRequest,
   AutofillResponse,
+  StopRequest,
+  StopResponse,
   UndoRequest,
   UndoResponse,
 } from "./messages";
@@ -18,6 +20,7 @@ type Status =
       skipped: string[];
       offPage: string[];
       currentStep?: string;
+      stopped?: boolean;
     }
   | { kind: "info"; message: string }
   | { kind: "error"; message: string };
@@ -41,9 +44,11 @@ export function AutofillButton() {
   const [canUndo, setCanUndo] = useState(false);
   const [pending, setPending] = useState<Pending[]>([]);
   const [captureError, setCaptureError] = useState<string | null>(null);
+  const [stopping, setStopping] = useState(false);
 
   async function onClick() {
     setBusy(true);
+    setStopping(false);
     setStatus({ kind: "idle" });
     setCanUndo(false);
     setPending([]);
@@ -60,8 +65,9 @@ export function AutofillButton() {
       if (!isSupportedUrl(tab.url)) {
         setStatus({
           kind: "error",
-          message:
-            "Active tab isn't a supported ATS (Greenhouse / Lever / Workday).",
+          message: `Active tab isn't a supported ATS (${SUPPORTED_ATS_LABELS.join(
+            " / ",
+          )}).`,
         });
         return;
       }
@@ -90,6 +96,7 @@ export function AutofillButton() {
         skipped: resp.skipped,
         offPage: resp.offPage ?? [],
         currentStep: resp.currentStep,
+        stopped: resp.stopped,
       });
       if (resp.filled > 0) setCanUndo(true);
       if (resp.unmatchedQuestions && resp.unmatchedQuestions.length > 0) {
@@ -99,6 +106,27 @@ export function AutofillButton() {
       }
     } finally {
       setBusy(false);
+      setStopping(false);
+    }
+  }
+
+  /**
+   * Asks the content script to abort. Fields already written stay written —
+   * Undo is the way to revert those — so this is a "stop doing more", not a
+   * rollback.
+   */
+  async function onStop() {
+    setStopping(true);
+    try {
+      const [tab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
+      if (!tab?.id) return;
+      const req: StopRequest = { type: "stop" };
+      (await chrome.tabs.sendMessage(tab.id, req)) as StopResponse;
+    } catch {
+      /* Run probably already finished; the finally block clears the state. */
     }
   }
 
@@ -174,6 +202,16 @@ export function AutofillButton() {
       >
         {busy ? "Filling…" : "Autofill this page"}
       </button>
+      {busy && (
+        <button
+          type="button"
+          className="autofill__stop"
+          onClick={() => void onStop()}
+          disabled={stopping}
+        >
+          {stopping ? "Stopping…" : "Stop filling"}
+        </button>
+      )}
       {canUndo && (
         <button
           type="button"
@@ -197,6 +235,9 @@ export function AutofillButton() {
       {status.kind === "ok" && (
         <div className="autofill__result">
           <div className="autofill__result-head">
+            {status.stopped && (
+              <span className="autofill__result-stopped">Stopped early · </span>
+            )}
             {status.filled.length > 0 ? (
               <span className="autofill__result-count">
                 Filled{" "}
