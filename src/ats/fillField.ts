@@ -41,8 +41,62 @@ export function setReactValue(el: FillableInput, value: string): void {
   } else {
     el.value = value;
   }
-  el.dispatchEvent(new Event("input", { bubbles: true }));
+  /*
+   * An InputEvent, not a bare Event. Handlers that inspect `inputType`/`data` to
+   * distinguish a real edit from a programmatic one ignore a plain Event — and
+   * `new Event("input")` is not an InputEvent, so `event.inputType` reads
+   * undefined. Falls back where InputEvent isn't constructible (older jsdom).
+   */
+  let inputEvent: Event;
+  try {
+    inputEvent = new InputEvent("input", {
+      bubbles: true,
+      inputType: "insertText",
+      data: value,
+    });
+  } catch {
+    inputEvent = new Event("input", { bubbles: true });
+  }
+  el.dispatchEvent(inputEvent);
   el.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
+/**
+ * The keystroke pair a real edit produces around the value change.
+ *
+ * Workday's typeahead already needed this (`typeInto` in dropdown.ts) because it
+ * drives its search off key events rather than `input`. Its plain text fields
+ * appear to gate change-tracking the same way: the value and the focus/blur pair
+ * alone left every field on My Information reported as empty at Submit even
+ * though the text was on screen.
+ *
+ * A single pair, not one per character — Workday reads the field's value on
+ * blur, so what matters is that a keystroke was seen at all, and per-character
+ * events on a long role description would cost seconds.
+ */
+function keyStroke(el: HTMLElement, types: string[]): void {
+  for (const type of types) {
+    try {
+      el.dispatchEvent(
+        new KeyboardEvent(type, { key: "a", bubbles: true, cancelable: true }),
+      );
+    } catch {
+      /* Unsupported here; the value write below still lands. */
+    }
+  }
+}
+
+/**
+ * Write a textual value the way a person would: focus, keystroke, value, blur.
+ * Every plain text/textarea fill goes through this — see `keyStroke` and
+ * `focusField` for why each part is load-bearing.
+ */
+export function typeValue(el: FillableInput, value: string): void {
+  focusField(el);
+  keyStroke(el, ["keydown", "keypress"]);
+  setReactValue(el, value);
+  keyStroke(el, ["keyup"]);
+  blurField(el);
 }
 
 export function setSelectValue(
@@ -152,40 +206,84 @@ function normalize(s: string): string {
   return s.trim().toLowerCase();
 }
 
+/**
+ * Normalized, de-duplicated list of acceptable answers, in priority order.
+ *
+ * A field may have more than one right answer because tenants word the same
+ * option differently — "How Did You Hear About Us?" offers "Company Website" on
+ * one Workday tenant and "Careers Website" on the next. Every option matcher
+ * therefore takes `string | string[]` and runs each *tier* across the whole
+ * list before dropping to a looser one: an exact hit on candidate 3 is a better
+ * answer than a fuzzy token hit on candidate 1.
+ */
+export function toCandidates(desired: string | string[]): string[] {
+  const list = Array.isArray(desired) ? desired : [desired];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const d of list) {
+    const t = normalize(d ?? "");
+    if (!t || seen.has(t)) continue;
+    seen.add(t);
+    out.push(t);
+  }
+  return out;
+}
+
+/** How a candidate list reads in a status message. */
+export function describeCandidates(desired: string | string[]): string {
+  return toCandidates(desired).join('" / "');
+}
+
 export function findMatchingOption(
   select: HTMLSelectElement,
-  desired: string,
+  desired: string | string[],
+  fuzzy = true,
 ): HTMLOptionElement | null {
-  const target = normalize(desired);
-  if (!target) return null;
+  const targets = toCandidates(desired);
+  if (targets.length === 0) return null;
   const opts = Array.from(select.options).filter(
     (o) => o.value !== "" && o.text.trim() !== "",
   );
 
-  let match = opts.find((o) => normalize(o.text) === target);
-  if (match) return match;
-  match = opts.find((o) => normalize(o.value) === target);
-  if (match) return match;
-
-  const subs = opts.filter((o) => {
-    const t = normalize(o.text);
-    return t.includes(target) || target.includes(t);
-  });
-  if (subs.length > 0) {
-    subs.sort((a, b) => a.text.length - b.text.length);
-    return subs[0];
+  for (const target of targets) {
+    const match =
+      opts.find((o) => normalize(o.text) === target) ??
+      opts.find((o) => normalize(o.value) === target);
+    if (match) return match;
   }
 
-  const targetTokens = new Set(tokens(desired));
-  if (targetTokens.size === 0) return null;
-  let best: { opt: HTMLOptionElement; score: number } | null = null;
-  for (const o of opts) {
-    const optTokens = tokens(o.text);
-    if (optTokens.length === 0) continue;
-    let overlap = 0;
-    for (const t of optTokens) if (targetTokens.has(t)) overlap++;
-    if (overlap === 0) continue;
-    if (!best || overlap > best.score) best = { opt: o, score: overlap };
+  for (const target of targets) {
+    const subs = opts.filter((o) => {
+      const t = normalize(o.text);
+      return t.includes(target) || target.includes(t);
+    });
+    if (subs.length > 0) {
+      subs.sort((a, b) => a.text.length - b.text.length);
+      return subs[0];
+    }
   }
-  return best ? best.opt : null;
+
+  /*
+   * Token overlap is the loosest tier and the only one that can answer a
+   * question with something the profile doesn't say — "Company Career Site"
+   * shares "career" with "Career Fair". Fields where a near miss would be a
+   * false claim rather than a harmless approximation opt out (see
+   * `howDidYouHear`) and are reported unfilled instead.
+   */
+  if (!fuzzy) return null;
+  for (const target of targets) {
+    const targetTokens = new Set(tokens(target));
+    if (targetTokens.size === 0) continue;
+    let best: { opt: HTMLOptionElement; score: number } | null = null;
+    for (const o of opts) {
+      const optTokens = tokens(o.text);
+      if (optTokens.length === 0) continue;
+      let overlap = 0;
+      for (const t of optTokens) if (targetTokens.has(t)) overlap++;
+      if (overlap === 0) continue;
+      if (!best || overlap > best.score) best = { opt: o, score: overlap };
+    }
+    if (best) return best.opt;
+  }
+  return null;
 }

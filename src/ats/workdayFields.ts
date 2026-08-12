@@ -10,6 +10,34 @@ import type { FieldDef } from "./types";
  * to label patterns. The label fallback only works at all because labels.ts
  * resolves `aria-labelledby` — Workday rarely emits `<label for>`.
  */
+/**
+ * Fallback answers to "How Did You Hear About Us?", best first — used when the
+ * profile has no `identity.howDidYouHear`. Every tenant words this list
+ * differently, which is why it's a candidate list and not one string.
+ *
+ * **"Website" leads on purpose.** The rule wanted is "whatever option has
+ * *website* in it": the matcher runs each tier across the whole list before
+ * loosening, so at the substring tier the bare "Website" candidate sweeps up
+ * `Employer Website`, `Company website / careers page`, `Recruiting Website`
+ * and the rest before a longer candidate can reverse-match a bare category like
+ * `Company`. Exactness isn't lost — the exact tier ran first, across all of
+ * them. The career-site phrasings below it are for tenants with no "website"
+ * option at all.
+ *
+ * The company's own careers site is the honest answer for an application filled
+ * straight from the job posting, and it's the option recruiters read as
+ * neutral.
+ */
+export const CAREERS_SITE_SOURCES = [
+  "Website",
+  "Company Website",
+  "Careers Website",
+  "Corporate Website",
+  "Company Career Site",
+  "Company Careers Page",
+  "Career Site",
+];
+
 export const workdayFields: Record<string, FieldDef> = {
   firstName: {
     kind: "input",
@@ -57,6 +85,45 @@ export const workdayFields: Record<string, FieldDef> = {
     labelPatterns: [/^phone( number)?\*?$/i, /^mobile( number)?\*?$/i],
     getValue: (p) => p.identity?.contact?.phone,
   },
+  /*
+   * Workday requires a device type alongside the number and offers no default.
+   * It's a dropdown, so `kind: "select"`. Read from the profile rather than
+   * hardcoded to "Mobile" — a landline would be a false claim, and the value is
+   * one the applicant knows.
+   */
+  phoneDeviceType: {
+    kind: "select",
+    page: "myInformation",
+    selectors: [
+      '[data-automation-id="phone-device-type"]',
+      '[data-automation-id="phoneType"]',
+    ],
+    labelPatterns: [/^phone device type\*?$/i, /^device type\*?$/i, /^phone type\*?$/i],
+    getValue: (p) => p.identity?.contact?.phoneType,
+  },
+  /*
+   * `fuzzy: false`: with no "website"-ish option present at all, the last-resort
+   * token tier would answer with a claim the applicant never made — "Company
+   * Career Site" shares the word "career" with "Career Fair". Reported unfilled
+   * instead.
+   */
+  howDidYouHear: {
+    kind: "select",
+    page: "myInformation",
+    fuzzy: false,
+    selectors: [
+      '[data-automation-id="source"]',
+      '[data-automation-id="sourceSection"]',
+      '[data-automation-id="sourcePrompt"]',
+      '[data-automation-id="formField-source"]',
+    ],
+    labelPatterns: [
+      /how did you hear about (us|this)/i,
+      /^source\*?$/i,
+      /referral source/i,
+    ],
+    getValue: (p) => p.identity?.howDidYouHear ?? CAREERS_SITE_SOURCES,
+  },
   street: {
     kind: "input",
     page: "myInformation",
@@ -95,9 +162,25 @@ export const workdayFields: Record<string, FieldDef> = {
       /^region\*?$/i,
       /^state\/province\*?$/i,
       /^state or province\*?$/i,
-      /^county\*?$/i,
     ],
     getValue: (p) => p.identity?.contact?.address?.state,
+  },
+  /*
+   * County is its own required dropdown on US Workday tenants, not a synonym
+   * for State. It used to sit in `state`'s label patterns, which was worse than
+   * missing: `findControlByLabel` returns the first matching control, so on a
+   * form with both fields the County box could absorb the state value and leave
+   * State empty — two errors instead of one.
+   */
+  county: {
+    kind: "select",
+    page: "myInformation",
+    selectors: [
+      '[data-automation-id="addressSection_county"]',
+      '[data-automation-id="county"]',
+    ],
+    labelPatterns: [/^county\*?$/i],
+    getValue: (p) => p.identity?.contact?.address?.county,
   },
   zip: {
     kind: "input",
@@ -434,6 +517,31 @@ export const workdayFields: Record<string, FieldDef> = {
       /authorized to work in (the )?u\.?s\.?\b/i,
     ],
     getValue: (p) => yesNo(p.identity?.workAuth?.authorizedToWorkInUS),
+  },
+  /*
+   * The combined form of the question — "I am currently eligible to work, and
+   * will in the future be eligible to work, in the country of this position
+   * without visa sponsorship." It asks two things at once, so neither
+   * `workAuthUS` nor `sponsorship` can answer it: "Yes" is only true when the
+   * applicant is authorized *and* needs no sponsorship.
+   *
+   * `[\s\S]*` rather than `.*` because the prompt wraps across lines in the
+   * DOM, and it sits after `workAuthUS` so that on a tenant wording it as
+   * "authorized to work in the US without sponsorship" — which both patterns
+   * match — the stricter answer is the one that lands.
+   */
+  eligibleWithoutSponsorship: {
+    kind: "select",
+    page: "questions",
+    labelPatterns: [
+      /eligible to work[\s\S]*without[\s\S]*sponsorship/i,
+      /authorized to work[\s\S]*without[\s\S]*sponsorship/i,
+    ],
+    getValue: (p) => {
+      const auth = p.identity?.workAuth;
+      if (auth?.authorizedToWorkInUS === undefined) return undefined;
+      return yesNo(auth.authorizedToWorkInUS && !auth.requiresSponsorship);
+    },
   },
   sponsorship: {
     kind: "select",

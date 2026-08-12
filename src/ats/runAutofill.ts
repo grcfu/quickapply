@@ -3,6 +3,7 @@ import type { AutofillResponse } from "../messages";
 import {
   base64ToFile,
   blurField,
+  describeCandidates,
   findMatchingOption,
   flashFilled,
   focusField,
@@ -10,6 +11,8 @@ import {
   setFileValue,
   setReactValue,
   setSelectValue,
+  toCandidates,
+  typeValue,
 } from "./fillField";
 import {
   TRIGGER_SELECTOR,
@@ -95,7 +98,13 @@ export function undoLastFill(): { undone: number } {
  */
 type FillResult =
   | { ok: true }
-  | { ok: false; reason: string; notFound?: boolean };
+  | {
+      ok: false;
+      reason: string;
+      notFound?: boolean;
+      /** Left alone on purpose, not a failure — nothing to report. */
+      skipped?: boolean;
+    };
 
 const TEXTUAL_SELECTOR =
   'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]), textarea';
@@ -191,13 +200,9 @@ function fillTextual(
   value: string,
 ): void {
   const prev = el.value;
-  focusField(el);
-  setReactValue(el, value);
-  blurField(el);
+  typeValue(el, value);
   pushRestorer(() => {
-    focusField(el);
-    setReactValue(el, prev);
-    blurField(el);
+    typeValue(el, prev);
   });
   flashFilled(el);
 }
@@ -214,12 +219,34 @@ function fillInputField(
   return { ok: true };
 }
 
+/**
+ * Placeholder text a Workday prompt button shows while unanswered. Anything
+ * else in the button means a real selection is already sitting there.
+ */
+const SELECT_PLACEHOLDER = /^(select( one| \.\.\.|…)?|choose( one)?|search)$/i;
+
+function alreadyAnswered(control: HTMLElement): boolean {
+  if (control instanceof HTMLSelectElement) return control.value !== "";
+  const text = (control.textContent ?? "").replace(/\s+/g, " ").trim();
+  return text !== "" && !SELECT_PLACEHOLDER.test(text);
+}
+
+/**
+ * `skipIfAnswered` is for the saved-answers pass: a stored answer must never
+ * overwrite a selection that's already there — either the applicant's own, or
+ * one the field map just made from better-typed profile data.
+ */
+type SelectFillOptions = { skipIfAnswered?: boolean };
+
 async function fillSelectField(
   key: string,
   def: SelectFieldDef,
-  value: string,
+  value: string | string[],
   root: ParentNode = document,
+  opts: SelectFillOptions = {},
 ): Promise<FillResult> {
+  const wanted = describeCandidates(value);
+  const fuzzy = def.fuzzy !== false;
   const native =
     findBySelectors<HTMLSelectElement>(
       def.selectors,
@@ -227,11 +254,15 @@ async function fillSelectField(
       (el) => el instanceof HTMLSelectElement,
     ) ?? findControlByLabel<HTMLSelectElement>("select", def.labelPatterns, root);
   if (native) {
-    const option = findMatchingOption(native, value);
+    if (opts.skipIfAnswered && alreadyAnswered(native)) {
+      return { ok: false, reason: `${key} (already answered)`, skipped: true };
+    }
+    const option = findMatchingOption(native, value, fuzzy);
     if (!option) {
-      return { ok: false, reason: `${key} (no option matched "${value}")` };
+      return { ok: false, reason: `${key} (no option matched "${wanted}")` };
     }
     const prev = native.value;
+    focusField(native);
     setSelectValue(native, option.value);
     blurField(native);
     pushRestorer(() => setSelectValue(native, prev));
@@ -243,8 +274,11 @@ async function fillSelectField(
     findDropdownTrigger(def.selectors, def.labelPatterns, root) ??
     findControlNearLabel<HTMLElement>(TRIGGER_SELECTOR, def.labelPatterns, root);
   if (trigger) {
+    if (opts.skipIfAnswered && alreadyAnswered(trigger)) {
+      return { ok: false, reason: `${key} (already answered)`, skipped: true };
+    }
     const before = (trigger.textContent ?? "").trim();
-    const ok = await selectFromDropdown(trigger, value);
+    const ok = await selectFromDropdown(trigger, value, 2000, fuzzy);
     if (ok) {
       /*
        * Workday dropdowns have no restorable `.value` — reopening and picking
@@ -254,12 +288,20 @@ async function fillSelectField(
       pushRestorer(() => {
         if (before) void selectFromDropdown(trigger, before);
       });
+      /*
+       * Clicking the option commits the *display*, but the trigger keeps focus,
+       * and Workday reads a prompt into its form model on blur exactly as it
+       * does a text box — so the same bracket that fixed the text fields is
+       * needed here. Safe only after the pick: blurring earlier would close the
+       * prompt list before an option could be clicked.
+       */
+      blurField(trigger);
       flashFilled(trigger);
       return { ok: true };
     }
     return {
       ok: false,
-      reason: `${key} (dropdown: no option matched "${value}")`,
+      reason: `${key} (dropdown: no option matched "${wanted}")`,
     };
   }
 
@@ -269,7 +311,7 @@ async function fillSelectField(
    * "one answer from a fixed set" semantics, different control, so it belongs
    * here rather than as a separate field kind.
    */
-  const radio = fillRadioField(key, def, value, root);
+  const radio = fillRadioField(key, def, value, root, opts);
   if (radio) return radio;
 
   /*
@@ -298,19 +340,27 @@ const CHECKBOX_SELECTOR = 'input[type="checkbox"]';
 function fillRadioField(
   key: string,
   def: SelectFieldDef,
-  value: string,
+  value: string | string[],
   root: ParentNode,
+  opts: SelectFillOptions = {},
 ): FillResult | null {
   const container = findOptionGroup(def.labelPatterns, RADIO_SELECTOR, root);
   if (!container) return null;
-  const target = findOptionByLabel(container, value, RADIO_SELECTOR);
-  if (!target) {
-    return { ok: false, reason: `${key} (no radio matched "${value}")` };
-  }
-  if (target.checked) return { ok: true };
-  const previous = Array.from(
+  const checked = Array.from(
     container.querySelectorAll<HTMLInputElement>(RADIO_SELECTOR),
   ).find((r) => r.checked);
+  if (opts.skipIfAnswered && checked) {
+    return { ok: false, reason: `${key} (already answered)`, skipped: true };
+  }
+  const target = findOptionByLabel(container, value, RADIO_SELECTOR);
+  if (!target) {
+    return {
+      ok: false,
+      reason: `${key} (no radio matched "${describeCandidates(value)}")`,
+    };
+  }
+  if (target.checked) return { ok: true };
+  const previous = checked;
   /*
    * A real click, not a `checked` assignment: radios commit through their click
    * handler, and setting `checked` directly leaves React's group state stale.
@@ -364,6 +414,13 @@ async function fillMultiTypeaheadField(
   }
   /* Clear whatever partial text is left in the box after the last pick. */
   if (input.value.trim() !== "") setReactValue(input, "");
+  /*
+   * Blur once, after the last pick — not inside the loop. The picks themselves
+   * must stay unblurred (that would close the prompt list mid-typeahead), but
+   * leaving the box focused at the end means Workday never reads the section
+   * into its form model, which is the same failure the text fields had.
+   */
+  blurField(input);
   flashFilled(input);
   if (missed.length > 0) {
     return {
@@ -414,24 +471,25 @@ function findOptionGroup(
 
 function findOptionByLabel(
   container: HTMLElement,
-  desired: string,
+  desired: string | string[],
   controlSelector: string,
 ): HTMLInputElement | null {
-  const candidates = labeledControls<HTMLInputElement>(
-    controlSelector,
-    container,
-  );
-  const target = desired.trim().toLowerCase();
-  if (!target) return null;
-  const exact = candidates.find((c) => c.label.toLowerCase() === target);
-  if (exact) return exact.el;
-  const subs = candidates.filter((c) => {
-    const t = c.label.toLowerCase();
-    return t.includes(target) || target.includes(t);
-  });
-  if (subs.length > 0) {
-    subs.sort((a, b) => a.label.length - b.label.length);
-    return subs[0].el;
+  const controls = labeledControls<HTMLInputElement>(controlSelector, container);
+  const targets = toCandidates(desired);
+  if (targets.length === 0) return null;
+  for (const target of targets) {
+    const exact = controls.find((c) => c.label.toLowerCase() === target);
+    if (exact) return exact.el;
+  }
+  for (const target of targets) {
+    const subs = controls.filter((c) => {
+      const t = c.label.toLowerCase();
+      return t.includes(target) || target.includes(t);
+    });
+    if (subs.length > 0) {
+      subs.sort((a, b) => a.label.length - b.label.length);
+      return subs[0].el;
+    }
   }
   return null;
 }
@@ -1044,7 +1102,10 @@ async function fillSubField<T>(
         : null);
     if (!trigger) return false;
     const ok = await selectFromDropdown(trigger, value);
-    if (ok) flashFilled(trigger);
+    if (ok) {
+      blurField(trigger);
+      flashFilled(trigger);
+    }
     return ok;
   }
   /* typeahead */
@@ -1056,7 +1117,10 @@ async function fillSubField<T>(
   );
   if (!input) return false;
   const ok = await selectFromTypeahead(input, value, setReactValue);
-  if (ok) flashFilled(input);
+  if (ok) {
+    blurField(input);
+    flashFilled(input);
+  }
   return ok;
 }
 
@@ -1171,6 +1235,26 @@ function findInputByQuestion(
     if (!best || overlap > best.score) best = { el: c.el, score: overlap };
   }
   return best ? best.el : null;
+}
+
+/**
+ * Turns a saved question into a label pattern for the select pass.
+ *
+ * Deliberately strict — the label must *contain* the whole question. The textual
+ * pass can afford `findInputByQuestion`'s token-overlap tier because a wrong
+ * guess there is visible text the applicant can read and delete; a wrong guess
+ * here silently commits an answer to a compliance question. Whitespace is
+ * flexible (the page wraps and indents its prompts), trailing punctuation and
+ * the required marker are dropped, and the three apostrophes interchange —
+ * "SEL's" is typed straight and rendered curly.
+ */
+export function questionPattern(question: string): RegExp {
+  const core = question.trim().replace(/[\s*?.:!]+$/, "");
+  const escaped = core
+    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    .replace(/['’‘]/g, "['’‘]")
+    .replace(/\s+/g, "\\s+");
+  return new RegExp(escaped, "i");
 }
 
 function truncate(s: string, max: number): string {
@@ -1306,8 +1390,9 @@ export async function runAutofill(): Promise<AutofillResponse> {
         }
         result = fillFileField(key, def, file);
       } else if (def.kind === "select") {
-        const value = def.getValue(profile);
-        if (!value) {
+        /* May be a list of acceptable phrasings, so test it after normalizing. */
+        const value = def.getValue(profile) ?? [];
+        if (toCandidates(value).length === 0) {
           skipped.push(`${key} (no value in profile)`);
           continue;
         }
@@ -1348,12 +1433,35 @@ export async function runAutofill(): Promise<AutofillResponse> {
   const filledByAnswer = new Set<HTMLTextAreaElement | HTMLInputElement>();
   for (const answer of profile.answers ?? []) {
     if (stopped()) break;
+    const label = `answer: "${truncate(answer.question, 40)}"`;
     const input = findInputByQuestion(answer.question);
-    if (!input) continue;
-    if (input.value.trim() !== "") continue;
-    fillTextual(input, answer.answer);
-    filledByAnswer.add(input);
-    fields.push(`answer: "${truncate(answer.question, 40)}"`);
+    if (input) {
+      if (input.value.trim() !== "") continue;
+      fillTextual(input, answer.answer);
+      filledByAnswer.add(input);
+      fields.push(label);
+      continue;
+    }
+    /*
+     * The same question asked as a dropdown or radio group rather than a text
+     * box — Workday renders "I agree to comply with …" and "I am eligible to
+     * work …" as Yes/No prompts, which the textual pass above can never reach.
+     * That's what makes a stored answer able to cover the boilerplate questions
+     * every application repeats but no field map can name in advance.
+     */
+    const result = await fillSelectField(
+      label,
+      {
+        kind: "select",
+        labelPatterns: [questionPattern(answer.question)],
+        getValue: () => answer.answer,
+      },
+      answer.answer,
+      document,
+      { skipIfAnswered: true },
+    );
+    if (result.ok) fields.push(label);
+    else if (!result.notFound && !result.skipped) skipped.push(result.reason);
   }
 
   const unmatchedQuestions = scanUnmatchedQuestions(

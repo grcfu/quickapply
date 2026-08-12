@@ -11,11 +11,15 @@ export type Address = {
   state?: string;
   zip?: string;
   country?: string;
+  /* Separate from `state`: US Workday tenants require both. */
+  county?: string;
 };
 
 export type Contact = {
   email?: string;
   phone?: string;
+  /* Workday's "Phone Device Type" — "Mobile", "Home", "Work". */
+  phoneType?: string;
   address?: Address;
 };
 
@@ -96,6 +100,13 @@ export type Identity = {
   projects?: Project[];
   certifications?: Certification[];
   awards?: Award[];
+  /**
+   * Answer to "How did you hear about us?" — a per-applicant preference, not a
+   * fact about the job. Left unset, the Workday field falls back to the
+   * company's own careers site, which is where an extension-driven application
+   * is being filled from anyway.
+   */
+  howDidYouHear?: string;
   eeo?: EEOAnswers;
 };
 

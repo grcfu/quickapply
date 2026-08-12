@@ -13,12 +13,14 @@ export function makeSampleProfile(): Profile {
       contact: {
         email: "test.user@example.com",
         phone: "+1-555-0142",
+        phoneType: "Mobile",
         address: {
           street: "123 Sample St",
           city: "Nashville",
           state: "TN",
           zip: "37203",
           country: "United States",
+          county: "Davidson",
         },
       },
       demographics: {

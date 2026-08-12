@@ -79,6 +79,56 @@ describe("findMatchingOption", () => {
     ]);
     expect(findMatchingOption(select, "Yes")?.value).toBe("yes");
   });
+
+  /*
+   * Candidate lists exist for questions whose option wording varies by tenant —
+   * "How did you hear about us?". The tiers must run across the whole list
+   * before loosening, or candidate 1's fuzzy hit beats candidate 3's exact one.
+   */
+  describe("candidate lists", () => {
+    it("takes a later candidate's exact hit over an earlier one's fuzzy hit", () => {
+      const select = makeSelect([
+        { value: "a", text: "Website Feedback Form" },
+        { value: "b", text: "Company Career Site" },
+      ]);
+      const match = findMatchingOption(select, [
+        "Company Website",
+        "Company Career Site",
+      ]);
+      expect(match?.value).toBe("b");
+    });
+
+    it("falls through to the next candidate when the first matches nothing", () => {
+      const select = makeSelect([
+        { value: "a", text: "Employee Referral" },
+        { value: "b", text: "Careers Website" },
+      ]);
+      expect(
+        findMatchingOption(select, ["Company Website", "Careers Website"])
+          ?.value,
+      ).toBe("b");
+    });
+
+    it("skips blank and duplicate candidates", () => {
+      const select = makeSelect([{ value: "a", text: "Careers Website" }]);
+      expect(findMatchingOption(select, ["", "  "])).toBeNull();
+      expect(findMatchingOption(select, [])).toBeNull();
+    });
+  });
+
+  /*
+   * fuzzy:false is for questions where a near miss is a false claim rather than
+   * an approximation — "Company Career Site" shares "career" with "Career Fair".
+   */
+  it("refuses the token tier when fuzzy is off", () => {
+    const select = makeSelect([
+      { value: "a", text: "Career Fair" },
+      { value: "b", text: "Employee Referral" },
+    ]);
+    const candidates = ["Company Website", "Company Career Site"];
+    expect(findMatchingOption(select, candidates)?.value).toBe("a");
+    expect(findMatchingOption(select, candidates, false)).toBeNull();
+  });
 });
 
 describe("focusField / blurField", () => {

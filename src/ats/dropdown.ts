@@ -11,6 +11,7 @@
  * `promptOption` markup.
  */
 
+import { toCandidates } from "./fillField";
 import { findControlByLabel, resolveWithin } from "./labels";
 
 /**
@@ -244,46 +245,55 @@ function stripQualifier(s: string): string {
  * The qualifier tier is load-bearing on Workday. Searching "Python" returns both
  * "Python (Programming Language)" and "Python IDLE"; without it, containment
  * picks the shortest match and silently selects Python IDLE.
+ *
+ * `desired` may be a list of acceptable phrasings — see `toCandidates`. Each
+ * tier is tried across the whole list before the next, looser tier starts, so a
+ * later candidate's exact hit always beats an earlier candidate's fuzzy one.
  */
 export function pickBestOption<T extends { text: string }>(
   options: T[],
-  desired: string,
+  desired: string | string[],
+  fuzzy = true,
 ): T | null {
-  const target = normalize(desired);
-  if (!target || options.length === 0) return null;
+  const targets = toCandidates(desired);
+  if (targets.length === 0 || options.length === 0) return null;
+  const shortestFirst = (a: T, b: T) => a.text.length - b.text.length;
 
-  const exact = options.find((o) => normalize(o.text) === target);
-  if (exact) return exact;
+  for (const target of targets) {
+    const exact = options.find((o) => normalize(o.text) === target);
+    if (exact) return exact;
 
-  const qualified = options.filter(
-    (o) => normalize(stripQualifier(o.text)) === target,
-  );
-  if (qualified.length > 0) {
-    qualified.sort((a, b) => a.text.length - b.text.length);
-    return qualified[0];
+    const qualified = options.filter(
+      (o) => normalize(stripQualifier(o.text)) === target,
+    );
+    if (qualified.length > 0) return qualified.sort(shortestFirst)[0];
   }
 
-  const subs = options.filter((o) => {
-    const t = normalize(o.text);
-    return t.includes(target) || target.includes(t);
-  });
-  if (subs.length > 0) {
-    subs.sort((a, b) => a.text.length - b.text.length);
-    return subs[0];
+  for (const target of targets) {
+    const subs = options.filter((o) => {
+      const t = normalize(o.text);
+      return t.includes(target) || target.includes(t);
+    });
+    if (subs.length > 0) return subs.sort(shortestFirst)[0];
   }
 
-  const targetTokens = new Set(tokensOf(desired));
-  if (targetTokens.size === 0) return null;
-  let best: { opt: T; score: number } | null = null;
-  for (const o of options) {
-    const optTokens = tokensOf(o.text);
-    if (optTokens.length === 0) continue;
-    let overlap = 0;
-    for (const t of optTokens) if (targetTokens.has(t)) overlap++;
-    if (overlap === 0) continue;
-    if (!best || overlap > best.score) best = { opt: o, score: overlap };
+  /* See findMatchingOption: fuzzy=false refuses to guess past containment. */
+  if (!fuzzy) return null;
+  for (const target of targets) {
+    const targetTokens = new Set(tokensOf(target));
+    if (targetTokens.size === 0) continue;
+    let best: { opt: T; score: number } | null = null;
+    for (const o of options) {
+      const optTokens = tokensOf(o.text);
+      if (optTokens.length === 0) continue;
+      let overlap = 0;
+      for (const t of optTokens) if (targetTokens.has(t)) overlap++;
+      if (overlap === 0) continue;
+      if (!best || overlap > best.score) best = { opt: o, score: overlap };
+    }
+    if (best) return best.opt;
   }
-  return best ? best.opt : null;
+  return null;
 }
 
 function dismiss(trigger: HTMLElement): void {
@@ -299,13 +309,14 @@ function dismiss(trigger: HTMLElement): void {
 /** Opens a dropdown trigger and clicks the option best matching `desired`. */
 export async function selectFromDropdown(
   trigger: HTMLElement,
-  desired: string,
+  desired: string | string[],
   timeoutMs = 2000,
+  fuzzy = true,
 ): Promise<boolean> {
   realClick(trigger);
   const options = await waitForOptions(timeoutMs);
   if (options.length === 0) return false;
-  const match = pickBestOption(options, desired);
+  const match = pickBestOption(options, desired, fuzzy);
   if (!match) {
     dismiss(trigger);
     return false;

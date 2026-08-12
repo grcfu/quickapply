@@ -33,7 +33,20 @@ export type SelectFieldDef = PageScoped & {
    */
   selectors?: string[];
   labelPatterns: RegExp[];
-  getValue: (profile: Profile) => string | undefined;
+  /**
+   * A list means "any of these answers is correct, best first" — for questions
+   * whose option wording varies by tenant ("Company Website" vs "Careers
+   * Website"). The matchers try every candidate at each tier before loosening;
+   * see `toCandidates` in fillField.ts.
+   */
+  getValue: (profile: Profile) => string | string[] | undefined;
+  /**
+   * Set false to refuse the token-overlap tier, leaving the field unfilled
+   * instead of picking a merely related option. For questions where a near miss
+   * would state something untrue — "How did you hear about us?" landing on
+   * "Career Fair" — rather than approximate it.
+   */
+  fuzzy?: boolean;
 };
 
 export type MultiCheckboxFieldDef = PageScoped & {
