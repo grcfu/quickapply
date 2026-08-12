@@ -3,6 +3,7 @@ import type {
   DeepPartial,
   Education,
   Experience,
+  ParsedResumeData,
   Profile,
   ResumeProfile,
 } from "../types/profile";
@@ -146,6 +147,30 @@ export async function addResume(resume: ResumeProfile): Promise<void> {
     );
   }
   await saveProfile(candidate);
+}
+
+/**
+ * Attaches (or clears, with `undefined`) the fields parsed off a resume.
+ *
+ * Separate from `addResume` because parsed data only lands after the user
+ * confirms it in `ResumeManager` — an upload saves the file immediately, but
+ * `pickSkills` / `pickExperiences` merge this into what gets typed onto a real
+ * application, so a bad parse must not take effect unreviewed.
+ *
+ * Not routed through `updateProfile`: a deep merge would union the old and new
+ * skill arrays element-wise, so clearing or shortening a parsed list would be
+ * impossible.
+ */
+export async function setResumeParsedData(
+  resumeId: string,
+  parsedData: ParsedResumeData | undefined,
+): Promise<void> {
+  const existing = await getProfile();
+  if (!existing) return;
+  const resumes = (existing.resumes ?? []).map((r) =>
+    r.id === resumeId ? { ...r, parsedData, updatedAt: now() } : r,
+  );
+  await saveProfile({ ...existing, resumes });
 }
 
 export async function removeResume(resumeId: string): Promise<void> {

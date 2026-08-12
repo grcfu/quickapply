@@ -1,3 +1,6 @@
+import type { Experience } from "../types/profile";
+import { extractExperiences } from "./extractExperiences";
+
 export type ExtractedFields = {
   firstName?: string;
   lastName?: string;
@@ -7,6 +10,7 @@ export type ExtractedFields = {
   gpa?: string;
   graduationDate?: string;
   skills?: string[];
+  experiences?: Experience[];
 };
 
 export function extractFields(text: string): ExtractedFields {
@@ -18,6 +22,7 @@ export function extractFields(text: string): ExtractedFields {
     gpa: extractGpa(text),
     graduationDate: extractGraduationDate(text),
     skills: extractSkills(text),
+    experiences: extractExperiences(text),
   };
 }
 

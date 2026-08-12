@@ -3,6 +3,7 @@ import {
   fullName,
   isInternship,
   parseMonthYear,
+  pickExperiences,
   pickInternships,
   pickProjects,
   pickSkills,
@@ -10,7 +11,7 @@ import {
   projectDescription,
   yesNo,
 } from "./profileHelpers";
-import type { Profile } from "../types/profile";
+import type { Experience, Profile } from "../types/profile";
 
 function profile(partial: Partial<Profile>): Profile {
   return {
@@ -88,7 +89,9 @@ describe("parseMonthYear", () => {
 });
 
 describe("pickSkills", () => {
-  it("prefers explicitly curated skills", () => {
+  it("merges resume-parsed skills ahead of the curated ones", () => {
+    /* Swapping the default resume has to change what gets filled, but nothing
+     * hand-entered may be dropped on the way. */
     const p = profile({
       skills: ["Python", "React"],
       resumes: [
@@ -101,10 +104,26 @@ describe("pickSkills", () => {
         },
       ],
     });
-    expect(pickSkills(p)).toEqual(["Python", "React"]);
+    expect(pickSkills(p)).toEqual(["Excel", "Python", "React"]);
   });
 
-  it("falls back to the default resume's parsed skills", () => {
+  it("dedupes across the two sources", () => {
+    const p = profile({
+      skills: ["Python", "React"],
+      resumes: [
+        {
+          id: "1",
+          name: "r",
+          createdAt: 0,
+          updatedAt: 0,
+          parsedData: { skills: ["python", "Rust"] },
+        },
+      ],
+    });
+    expect(pickSkills(p)).toEqual(["python", "Rust", "React"]);
+  });
+
+  it("uses only the default resume's parsed skills", () => {
     const p = profile({
       settings: { defaultResumeId: "b" },
       resumes: [
@@ -214,6 +233,106 @@ describe("internship routing", () => {
       ],
     });
     expect(pickWorkExperiences(p)?.map((e) => e.company)).toEqual(["Parsed"]);
+  });
+});
+
+describe("pickExperiences merging", () => {
+  function withResume(
+    parsed: Experience[],
+    curated: Experience[],
+  ): Profile {
+    return profile({
+      identity: { experiences: curated },
+      resumes: [
+        {
+          id: "a",
+          name: "a",
+          createdAt: 0,
+          updatedAt: 0,
+          parsedData: { experiences: parsed },
+        },
+      ],
+    });
+  }
+
+  it("lists resume entries first, then the curated ones", () => {
+    const out = pickExperiences(
+      withResume(
+        [{ company: "Globex", title: "Engineer" }],
+        [{ company: "Acme", title: "Analyst" }],
+      ),
+    );
+    expect(out.map((e) => e.company)).toEqual(["Globex", "Acme"]);
+  });
+
+  it("merges the same job instead of listing it twice", () => {
+    const out = pickExperiences(
+      withResume(
+        [{ company: "World Wide Technology", title: "Software Engineer Intern" }],
+        [{ company: "world wide technology", title: "Software Engineer Intern" }],
+      ),
+    );
+    expect(out).toHaveLength(1);
+  });
+
+  it("keeps the parsed values but backfills the fields it missed", () => {
+    /* A regex parse routinely misses a location; the curated entry has it, and
+     * an empty field on the form helps nobody. */
+    const out = pickExperiences(
+      withResume(
+        [{ company: "Acme", title: "Engineer", startDate: "May 2025" }],
+        [
+          {
+            company: "Acme",
+            title: "Engineer",
+            startDate: "2025-05",
+            location: "St. Louis, MO",
+            description: "Hand-written.",
+          },
+        ],
+      ),
+    );
+    expect(out).toEqual([
+      {
+        company: "Acme",
+        title: "Engineer",
+        startDate: "May 2025",
+        location: "St. Louis, MO",
+        description: "Hand-written.",
+      },
+    ]);
+  });
+
+  it("merges on company alone when the parse got no title", () => {
+    const out = pickExperiences(
+      withResume([{ company: "Acme" }], [{ company: "Acme", title: "Engineer" }]),
+    );
+    expect(out).toEqual([{ company: "Acme", title: "Engineer" }]);
+  });
+
+  it("keeps two different roles at the same company apart", () => {
+    const out = pickExperiences(
+      withResume(
+        [{ company: "Acme", title: "Senior Engineer" }],
+        [{ company: "Acme", title: "Engineer" }],
+      ),
+    );
+    expect(out.map((e) => e.title)).toEqual(["Senior Engineer", "Engineer"]);
+  });
+
+  it("does not merge on a blank company", () => {
+    /* Two title-only entries are not the same job just because neither names
+     * an employer. */
+    const out = pickExperiences(
+      withResume([{ title: "Engineer" }], [{ title: "Analyst" }]),
+    );
+    expect(out).toHaveLength(2);
+  });
+
+  it("leaves the curated list untouched when no resume is parsed", () => {
+    const curated = [{ company: "Acme", title: "Engineer" }];
+    const p = profile({ identity: { experiences: curated } });
+    expect(pickExperiences(p)).toEqual(curated);
   });
 });
 

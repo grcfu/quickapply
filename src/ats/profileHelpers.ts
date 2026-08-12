@@ -50,18 +50,22 @@ function dedupe(values: string[]): string[] {
 }
 
 /**
- * Skills the user explicitly curated win; otherwise fall back to whatever the
- * resume parser pulled off the default resume, so Workday's skills section has
- * something to work with even for profiles saved before `Profile.skills`
- * existed.
+ * Skills from the default resume, then the ones curated on the profile,
+ * deduped case-insensitively.
+ *
+ * The two lists are **merged rather than ranked** so that swapping the default
+ * resume updates what gets filled without discarding anything hand-entered —
+ * a curated profile is usually the fuller list, but it is also the stale one
+ * the moment a new resume is uploaded. Resume entries lead because they
+ * describe the resume actually being attached to this application.
  */
 export function pickSkills(profile: Profile): string[] | undefined {
-  const explicit = (profile.skills ?? []).map((s) => s.trim()).filter(Boolean);
-  if (explicit.length > 0) return dedupe(explicit);
   const parsed = (pickResume(profile)?.parsedData?.skills ?? [])
     .map((s) => s.trim())
     .filter(Boolean);
-  return parsed.length > 0 ? dedupe(parsed) : undefined;
+  const explicit = (profile.skills ?? []).map((s) => s.trim()).filter(Boolean);
+  const merged = dedupe([...parsed, ...explicit]);
+  return merged.length > 0 ? merged : undefined;
 }
 
 /**
@@ -77,14 +81,73 @@ export function fullName(profile: Profile): string | undefined {
   return parts.length > 0 ? parts.join(" ") : undefined;
 }
 
+function normalizeKey(value: string | undefined): string {
+  return (value ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
 /**
- * Curated identity entries win; otherwise fall back to whatever the resume
- * parser pulled off the default resume, same rule as `pickSkills`.
+ * Whether two entries describe the same job, for merging the resume-parsed list
+ * with the curated one.
+ *
+ * Company names must match exactly once normalized. Prefix matching would catch
+ * "World Wide Technology" against "World Wide Technology, Inc.", but it would
+ * also fold "Google Cloud" into "Google" and silently drop a real role — and a
+ * missed match only costs a visible duplicate row the user can delete, while a
+ * wrong match loses data with no sign on the form. The visible failure is the
+ * better one.
+ *
+ * Titles are compared only when both sides have one, so a parse that got the
+ * employer but not the role still merges instead of duplicating.
+ */
+function sameRole(a: Experience, b: Experience): boolean {
+  const companyA = normalizeKey(a.company);
+  const companyB = normalizeKey(b.company);
+  if (!companyA || !companyB || companyA !== companyB) return false;
+  const titleA = normalizeKey(a.title);
+  const titleB = normalizeKey(b.title);
+  if (!titleA || !titleB) return true;
+  return titleA === titleB;
+}
+
+const EXPERIENCE_FIELDS = [
+  "company",
+  "title",
+  "location",
+  "startDate",
+  "endDate",
+  "description",
+] as const;
+
+/** `primary`'s values win; anything it left blank is taken from `secondary`. */
+function backfill(primary: Experience, secondary: Experience): Experience {
+  const out: Experience = { ...primary };
+  for (const field of EXPERIENCE_FIELDS) {
+    if (!out[field]?.trim()) out[field] = secondary[field];
+  }
+  return out;
+}
+
+/**
+ * Resume-parsed experiences followed by the curated ones, with entries for the
+ * same job merged rather than listed twice — same merge rule as `pickSkills`,
+ * so uploading a new resume updates what gets filled without dropping anything
+ * hand-entered.
+ *
+ * Where the two describe the same job the parsed values win, because that is
+ * the resume being attached; but a regex parse routinely misses a location or
+ * mangles a description, so any field it left blank is taken from the curated
+ * entry instead of going to the form empty.
  */
 export function pickExperiences(profile: Profile): Experience[] {
-  const explicit = profile.identity?.experiences ?? [];
-  if (explicit.length > 0) return explicit;
-  return pickResume(profile)?.parsedData?.experiences ?? [];
+  const parsed = pickResume(profile)?.parsedData?.experiences ?? [];
+  const curated = profile.identity?.experiences ?? [];
+  const out: Experience[] = parsed.map((e) => ({ ...e }));
+  for (const entry of curated) {
+    const twin = out.findIndex((e) => sameRole(e, entry));
+    if (twin >= 0) out[twin] = backfill(out[twin], entry);
+    else out.push(entry);
+  }
+  return out;
 }
 
 /*

@@ -514,6 +514,7 @@
 .resumes__item {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   padding: 8px 10px;
   background: var(--bg);
@@ -574,6 +575,112 @@
 .resumes__remove:hover {
   background: var(--danger-bg);
   border-color: var(--danger-border);
+}
+
+/* Second row of a resume item: what its parsed data contributes to autofill. */
+.resumes__parsed {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.resumes__parsed-drop {
+  appearance: none;
+  font: inherit;
+  font-size: 10px;
+  padding: 1px 5px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.resumes__parsed-drop:hover {
+  background: var(--bg-muted);
+  border-color: var(--border-strong);
+}
+
+.resumes__busy {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/*
+ * Parsed fields are shown for confirmation before they are stored: they get
+ * merged into what autofill types onto a live application, and a regex parse
+ * of a PDF is wrong often enough to be worth a look first.
+ */
+.resumes__review {
+  margin-top: 8px;
+  padding: 10px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
+}
+
+.resumes__review-head {
+  margin: 0 0 8px;
+  font-size: 11px;
+  color: var(--text);
+}
+
+.resumes__review-list {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.resumes__review-skills {
+  margin: 0 0 8px;
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.resumes__review-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.resumes__review-accept,
+.resumes__review-discard {
+  appearance: none;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    background var(--t-fast),
+    border-color var(--t-fast);
+}
+
+.resumes__review-accept {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.resumes__review-discard {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-muted);
+}
+
+.resumes__review-discard:hover {
+  background: var(--bg-muted);
+  border-color: var(--border-strong);
 }
 
 .resumes__add {
